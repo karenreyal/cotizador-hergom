@@ -185,6 +185,34 @@
   }
   .btn-secondary:hover{background:#eef4fb;}
 
+  /* complementos sugeridos (subir ticket promedio) */
+  .comp-box{margin-top:12px; display:flex; flex-direction:column; gap:10px;}
+  .comp-group{border:1px solid #b9d7f2; background:#f3f9ff; border-radius:10px; padding:10px 10px 4px;}
+  .comp-head{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:4px;}
+  .comp-title{font-size:12.5px; font-weight:700; color:var(--navy-dark);}
+  .comp-sub{font-size:11px; color:var(--muted);}
+  .comp-row{display:flex; gap:9px; align-items:center; padding:8px 0; border-top:1px solid #dbe9f6;}
+  .comp-thumb{width:36px; height:36px; object-fit:contain; border-radius:6px; flex:0 0 auto; border:1px solid var(--line); background:#fff;}
+  .comp-info{flex:1; min-width:0;}
+  .comp-clave{font-size:12px; font-weight:700; color:var(--navy-dark);}
+  .comp-desc{font-size:11px; color:var(--muted); line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .comp-price{font-size:12px; font-weight:700; color:var(--navy); margin-top:2px;}
+  .comp-price small{font-weight:600; font-size:10px; opacity:.8;}
+  .comp-add{flex:0 0 auto; border:1px solid var(--navy); background:#fff; color:var(--navy); border-radius:7px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer;}
+  .comp-add:hover{background:var(--navy); color:#fff;}
+  .comp-add:disabled{opacity:.5; cursor:default; background:#fff; color:var(--navy);}
+  .preg-card{margin-top:10px; border:1px solid #f0c36d; background:#fff8e6; border-radius:10px; padding:11px;}
+  .preg-title{font-size:13px; font-weight:700; color:var(--navy-dark); margin-bottom:8px;}
+  .preg-opts{display:flex; gap:8px; flex-wrap:wrap;}
+  .preg-opt{flex:1 1 150px; min-width:0; text-align:left; border:1px solid var(--navy); background:#fff; color:var(--navy); border-radius:8px; padding:9px 11px; cursor:pointer; display:flex; flex-direction:column; gap:2px;}
+  .preg-opt b{font-size:13px;}
+  .preg-opt span{font-size:11.5px; color:var(--muted);}
+  .preg-opt:hover{background:#eef4fb;}
+  .item-flash{animation:itemFlash 1.3s ease-out;}
+  @keyframes itemFlash{from{background:#fff0bf;} to{background:#fbfcfd;}}
+  .toast-add{position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--navy-dark); color:#fff; padding:9px 16px; border-radius:20px; font-size:12.5px; font-weight:600; z-index:100; box-shadow:0 6px 20px rgba(20,30,50,.3); max-width:90vw;}
+  @media (prefers-reduced-motion:reduce){ .item-flash{animation:none;} }
+
   /* cotizaciones guardadas / retomar */
   .saved-box{border:1px solid var(--line); border-radius:9px; background:#fbfcfd; padding:10px; margin-bottom:14px;}
   .saved-list{max-height:250px; overflow-y:auto; margin-top:8px; border:1px solid var(--line); border-radius:8px; background:#fff;}
@@ -492,6 +520,7 @@
         <input type="text" id="prodSearch" autocomplete="off" placeholder="Ej. VETUS E3, transductor, Mindray...">
         <span class="search-icon">⌕</span>
         <div class="results" id="prodResults" style="display:none;"></div>
+        <div class="preg-card" id="pregCard" style="display:none;"></div>
         <div class="manual-add">
           <button type="button" class="link-btn" id="btnManualAdd">+ Agregar producto libre (fuera de catálogo)</button>
         </div>
@@ -502,6 +531,7 @@
       </div>
 
       <div id="itemsList" class="items-list"></div>
+      <div id="compBox" class="comp-box"></div>
       <div class="total-line">
         <span id="editorTotalLabel">Total</span>
         <span class="amt" id="editorTotal">$0.00</span>
@@ -548,7 +578,6 @@
       <div class="field-group">
         <textarea id="inNotas">Equipos nuevos
 Garantía de un año contra defectos de fabricación
-Entrega en 15 días, incluye envío.
 Incluye instalación y capacitación</textarea>
         <div class="hint">Una nota por línea — se imprime igual que en tu plantilla.</div>
       </div>
@@ -742,6 +771,37 @@ let state = {
 };
 
 let itemSeq = 0;
+
+// ---------- COMPLEMENTOS SUGERIDOS (para subir el ticket promedio) ----------
+// Para agregar o cambiar sugerencias solo se edita este bloque.
+// COMPLEMENTOS: cuando una de estas claves está en la cotización, se sugieren las claves de su lista.
+const COMPLEMENTOS = {
+  // --- Rayos X ---
+  'VETIGEN-P50':  ['VETIGENTR', 'VETIPADPLUSV', 'VETIPADC1V', 'BXJJ-X004', 'BX-005'],
+  'VETIPADPLUSV': ['VETIGEN-P50', 'VETIGENTR'],
+  'VETIPADC1V':   ['VETIGEN-P50', 'VETIGENTR'],
+  // --- Ultrasonido VETUS E7 ---
+  'VETUSE7':      ['009-003702-00', 'iCOVERKIT', 'DUALVETUSE7', 'C11-3S', 'C5-1SV', 'L13-3NSV', 'L16-4HSV'],
+  'VETUSE7ADV':   ['009-003702-00', 'iCOVERKIT', 'DUALVETUSE7', 'C11-3S', 'C5-1SV', 'L13-3NSV', 'L16-4HSV',
+                   'P10-4SV', 'P8-2S', 'P4-2SV', '9101-20-58104', 'ECGVETUSE7']
+};
+// PREGUNTAS_VERSION: al elegir esta clave en el buscador se pregunta qué versión necesita,
+// y se agrega la clave de la opción elegida.
+const PREGUNTAS_VERSION = {
+  'VETUSE7': {
+    texto: '¿Buscas la versión básica o avanzada (para cardio)?',
+    opciones: [
+      { etiqueta: 'Básica',            clave: 'VETUSE7'    },
+      { etiqueta: 'Avanzada (cardio)', clave: 'VETUSE7ADV' }
+    ]
+  }
+};
+const claveNorm = c => String(c || '').trim().toUpperCase();
+const COMP_MAP = {};
+Object.keys(COMPLEMENTOS).forEach(k => { COMP_MAP[claveNorm(k)] = COMPLEMENTOS[k]; });
+const PREG_MAP = {};
+Object.keys(PREGUNTAS_VERSION).forEach(k => { PREG_MAP[claveNorm(k)] = PREGUNTAS_VERSION[k]; });
+let lastAddedId = null;
 
 // ---------- helpers ----------
 function todayISO(){
@@ -1084,10 +1144,16 @@ function searchProducts(q){
   q = q.trim().toUpperCase();
   if (!q) return [];
   const terms = q.split(/\s+/);
-  return PRODUCTS.filter(p=>{
+  const hits = PRODUCTS.filter(p=>{
     const hay = `${p.clave} ${p.desc} ${p.marca} ${p.cat||''}`.toUpperCase();
     return terms.every(t=> hay.includes(t));
-  }).slice(0, 10);
+  }).map((p,i)=>{
+    const k = p.clave.toUpperCase();
+    // la clave exacta sale primero, luego las que empiezan igual, luego las que la contienen
+    return {p, i, s: k === q ? 0 : k.startsWith(q) ? 1 : k.includes(q) ? 2 : 3};
+  });
+  hits.sort((a,b)=> a.s - b.s || a.i - b.i);
+  return hits.slice(0, 10).map(x=>x.p);
 }
 
 function precioResultado(p){
@@ -1119,9 +1185,11 @@ function renderResults(list){
   resultsBox.querySelectorAll('.result-item').forEach(el=>{
     el.addEventListener('click', ()=>{
       const p = list[Number(el.dataset.idx)];
-      addItem({marca:p.marca, clave:p.clave, desc:p.desc, pp:p.pp, pd:p.pd, cantidad:1});
       searchInput.value = '';
       resultsBox.style.display = 'none';
+      const preg = PREG_MAP[claveNorm(p.clave)];
+      if (preg && mostrarPregunta(preg)) return;
+      agregarDeCatalogo(p);
       searchInput.focus();
     });
   });
@@ -1145,9 +1213,96 @@ document.getElementById('btnManualAdd').addEventListener('click', ()=>{
 
 // ---------- items ----------
 function addItem(item){
-  state.items.push(Object.assign({id: 'it'+(itemSeq++)}, item));
+  const id = 'it'+(itemSeq++);
+  state.items.push(Object.assign({id}, item));
+  lastAddedId = id;
   renderItemsEditor();
   render();
+}
+
+function mostrarAviso(msg){
+  const old = document.getElementById('toastAdd');
+  if (old) old.remove();
+  const t = document.createElement('div');
+  t.id = 'toastAdd'; t.className = 'toast-add'; t.setAttribute('role', 'status');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ if (t.parentNode) t.remove(); }, 2300);
+}
+
+function agregarDeCatalogo(p){
+  addItem({marca:p.marca, clave:p.clave, desc:p.desc, pp:p.pp, pd:p.pd, cantidad:1});
+  mostrarAviso('✓ ' + p.clave + ' agregado a la cotización');
+}
+
+// Pregunta qué versión necesita (p. ej. básica o avanzada). Regresa false si no se pudo armar la pregunta.
+function mostrarPregunta(preg){
+  const card = document.getElementById('pregCard');
+  const ops = (preg.opciones || []).map(o => ({o, p: buscarPrecios(o.clave)})).filter(x => x.p);
+  if (!card || !ops.length) return false;
+  card.innerHTML = `
+    <div class="preg-title">${esc(preg.texto)}</div>
+    <div class="preg-opts">
+      ${ops.map((x,i)=>`
+        <button type="button" class="preg-opt" data-op="${i}">
+          <b>${esc(x.o.etiqueta)}</b>
+          <span>${esc(x.p.clave)} · ${precioResultado(x.p)}</span>
+        </button>`).join('')}
+    </div>
+    <div class="manual-add"><button type="button" class="link-btn" data-cancel="1">Cancelar</button></div>`;
+  card.style.display = 'block';
+  card.querySelectorAll('[data-op]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      card.style.display = 'none';
+      agregarDeCatalogo(ops[Number(b.dataset.op)].p);
+      searchInput.focus();
+    });
+  });
+  card.querySelector('[data-cancel]').addEventListener('click', ()=>{ card.style.display = 'none'; });
+  card.scrollIntoView({block:'nearest'});
+  return true;
+}
+
+// Panel "Complementos sugeridos": uno por cada producto de la cotización que tenga sugerencias.
+function renderComplementos(){
+  const box = document.getElementById('compBox');
+  if (!box) return;
+  const enCot = new Set(state.items.map(it => claveNorm(it.clave)));
+  const grupos = [], vistos = new Set();
+  state.items.forEach(it=>{
+    const k = claveNorm(it.clave);
+    if (!k || vistos.has(k) || !COMP_MAP[k]) return;
+    vistos.add(k);
+    const filas = COMP_MAP[k].map(c => buscarPrecios(c)).filter(p => p && !enCot.has(claveNorm(p.clave)));
+    if (filas.length) grupos.push({base: it.clave, filas});
+  });
+  if (!grupos.length){ box.innerHTML = ''; return; }
+  box.innerHTML = grupos.map(g=>`
+    <div class="comp-group">
+      <div class="comp-head">
+        <div class="comp-title">💡 Complementos sugeridos para ${esc(g.base)}</div>
+        <div class="comp-sub">${g.filas.length} disponible${g.filas.length === 1 ? '' : 's'}</div>
+      </div>
+      ${g.filas.map(p=>{
+        const precio = state.tipoPrecio === 'PD' ? p.pd : p.pp;
+        return `
+      <div class="comp-row">
+        <img class="comp-thumb" src="${imgFor(p.clave)}" alt="">
+        <div class="comp-info">
+          <div class="comp-clave">${esc(p.clave)}</div>
+          <div class="comp-desc">${esc(p.desc)}</div>
+          <div class="comp-price">${precioResultado(p)}</div>
+        </div>
+        <button type="button" class="comp-add" data-comp="${esc(p.clave)}" ${precio > 0 ? '' : 'disabled'}>+ Agregar</button>
+      </div>`;
+      }).join('')}
+    </div>`).join('');
+  box.querySelectorAll('[data-comp]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const p = buscarPrecios(btn.dataset.comp);
+      if (p) agregarDeCatalogo(p);
+    });
+  });
 }
 function removeItem(id){
   state.items = state.items.filter(it=>it.id!==id);
@@ -1158,11 +1313,13 @@ function updateItem(id, field, value){
   const it = state.items.find(it=>it.id===id);
   if (!it) return;
   it[field] = value;
+  if (field === 'clave') renderComplementos();
   render();
 }
 
 function renderItemsEditor(){
   const box = document.getElementById('itemsList');
+  renderComplementos();
   if (!state.items.length){
     box.innerHTML = `<div class="empty-items">Aún no agregas productos. Búscalos arriba o crea uno libre.</div>`;
     return;
@@ -1214,6 +1371,11 @@ function renderItemsEditor(){
       updateItem(el.dataset.id, field, val);
     });
   });
+  if (lastAddedId){
+    const card = box.querySelector('[data-id="' + lastAddedId + '"]');
+    if (card) card.classList.add('item-flash');
+    lastAddedId = null;
+  }
 }
 
 // ---------- calculations ----------
