@@ -817,8 +817,14 @@ let lastAddedId = null;
 
 // ---------- DIRECTORIO DE ASESORES (campos Área y Asesor) ----------
 // Salió de DIRECTORIO.xlsx (solo área, nombre y teléfono). a = área · n = nombre · t = teléfono (vacío si el directorio no trae uno válido).
+// AREA_PREDETERMINADA es el área que aparece elegida al abrir la página (si ya hay un asesor recordado, se muestra el suyo).
 // Para actualizarlo, mándale a Claude el Excel nuevo.
+const AREA_PREDETERMINADA = 'Veterinaria';
 const DIRECTORIO_ASESORES = [
+  {"a":"Veterinaria","n":"Carlos Eduardo Arcos Govea","t":"55 5055 3270"},
+  {"a":"Veterinaria","n":"Juan Manuel Rabago Martinez","t":"55 4347 9243"},
+  {"a":"Veterinaria","n":"Karen Reyes Alonso","t":"56 6225 4611"},
+  {"a":"Veterinaria","n":"Omar Portuguez Carmona","t":"56 2568 8314"},
   {"a":"Nuevos Negocios","n":"Aaron Fernando Lopez Ibarra","t":"55 4566 5381"},
   {"a":"Nuevos Negocios","n":"Alejandra Hernandez Gonzalez","t":"55 4566 9531"},
   {"a":"Nuevos Negocios","n":"Carolina Garcia Trejo","t":"56 5103 3785"},
@@ -1781,6 +1787,8 @@ function inicializarAsesor(){
     } else {
       selA.value = OTRO_ASESOR; modoOtro();
     }
+  } else if (areas.includes(AREA_PREDETERMINADA)){
+    selA.value = AREA_PREDETERMINADA; modoArea(AREA_PREDETERMINADA);
   } else {
     selA.value = '';
   }
