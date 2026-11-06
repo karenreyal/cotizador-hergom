@@ -1,0 +1,31 @@
+{
+  "revisado": "2026-11-06T23:06:36Z",
+  "resultado": "ok",
+  "mensaje": "",
+  "fuenteModificado": "2025-10-21T22:05:03Z",
+  "fuente": "Lista Precios Oct25.xlsx",
+  "productos": 159,
+  "cambios": {
+    "nuevos": 0,
+    "quitados": 0,
+    "precios": 0,
+    "textos": 0
+  },
+  "avisos": [
+    "Clave repetida con precios distintos (se usa la primera): C11-3S",
+    "Clave repetida con precios distintos (se usa la primera): P10-4SV",
+    "Clave repetida con precios distintos (se usa la primera): P8-2S",
+    "Clave repetida con precios distintos (se usa la primera): C11-3S",
+    "Clave repetida con precios distintos (se usa la primera): P10-4SV",
+    "Clave repetida con precios distintos (se usa la primera): P8-2S",
+    "Clave repetida con precios distintos (se usa la primera): L13-3NS",
+    "Clave repetida con precios distintos (se usa la primera): C11-3S",
+    "Clave repetida con precios distintos (se usa la primera): P10-4SV",
+    "Clave repetida con precios distintos (se usa la primera): P8-2S",
+    "Clave repetida con precios distintos (se usa la primera): L13-3NS",
+    "Clave repetida con precios distintos (se usa la primera): C11-3S",
+    "Clave repetida con precios distintos (se usa la primera): P10-4SV",
+    "Clave repetida con precios distintos (se usa la primera): P8-2S"
+  ],
+  "verificacion": "Total verificado"
+}
