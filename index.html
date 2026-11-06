@@ -87,7 +87,7 @@
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   label{display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:4px;}
   .req{color:var(--danger);}
-  input.field-error{border-color:var(--danger) !important; outline:2px solid #fbd8d4;}
+  input.field-error, select.field-error{border-color:var(--danger) !important; outline:2px solid #fbd8d4;}
   input[type=text], input[type=number], input[type=date], select, textarea{
     width:100%; border:1px solid var(--line); border-radius:7px; padding:8px 9px;
     font-size:13.5px; font-family:inherit; color:var(--ink); background:#fbfcfd;
@@ -507,8 +507,14 @@
         </div>
       </div>
       <div class="field-group">
-        <label for="inAsesor">Asesor <span class="req">*</span></label>
-        <input type="text" id="inAsesor" placeholder="Nombre del asesor">
+        <label for="selArea">Área del asesor</label>
+        <select id="selArea"></select>
+      </div>
+      <div class="field-group">
+        <label for="selAsesor">Asesor <span class="req">*</span></label>
+        <select id="selAsesor" disabled></select>
+        <input type="text" id="inAsesor" placeholder="Escribe tu nombre completo" style="display:none;">
+        <div class="hint" id="asesorHint">Primero elige tu área y luego tu nombre.</div>
       </div>
       <div class="field-group">
         <label for="inTelefono">Teléfono del asesor <span class="req">*</span></label>
@@ -808,6 +814,79 @@ Object.keys(COMPLEMENTOS).forEach(k => { COMP_MAP[claveNorm(k)] = COMPLEMENTOS[k
 function preguntaPorBusqueda(q){ return PREGUNTAS_VERSION.find(x => x.busquedas.some(b => busquedaNorm(b) === busquedaNorm(q))) || null; }
 function preguntaPorClave(c){ return PREGUNTAS_VERSION.find(x => x.claves.some(k => claveNorm(k) === claveNorm(c))) || null; }
 let lastAddedId = null;
+
+// ---------- DIRECTORIO DE ASESORES (campos Área y Asesor) ----------
+// Salió de DIRECTORIO.xlsx (solo área, nombre y teléfono). a = área · n = nombre · t = teléfono (vacío si el directorio no trae uno válido).
+// Para actualizarlo, mándale a Claude el Excel nuevo.
+const DIRECTORIO_ASESORES = [
+  {"a":"Nuevos Negocios","n":"Aaron Fernando Lopez Ibarra","t":"55 4566 5381"},
+  {"a":"Nuevos Negocios","n":"Alejandra Hernandez Gonzalez","t":"55 4566 9531"},
+  {"a":"Nuevos Negocios","n":"Carolina Garcia Trejo","t":"56 5103 3785"},
+  {"a":"Nuevos Negocios","n":"Claudia Leticia Barajas Montiel","t":"55 1877 1108"},
+  {"a":"Nuevos Negocios","n":"Donnovan Lopez Banderas","t":""},
+  {"a":"Nuevos Negocios","n":"Emilia Abarca Hernandez","t":"55 6628 5056"},
+  {"a":"Nuevos Negocios","n":"Ivan Alejandro Martinez Leyva","t":"55 7956 6646"},
+  {"a":"Nuevos Negocios","n":"Josue Daniel Martinez Jaramillo","t":"55 4837 7459"},
+  {"a":"Nuevos Negocios","n":"Maria Fernanda Barragan Morales","t":"55 6009 9307"},
+  {"a":"Nuevos Negocios","n":"Melba Alejandra Marin Rodriguez","t":"55 3193 4981"},
+  {"a":"Nuevos Negocios","n":"Ronit Nohemi Arias Blanco","t":"55 3223 6359"},
+  {"a":"Nuevos Negocios","n":"Selena Tellez Alvarado","t":"55 7220 4140"},
+  {"a":"Nuevos Negocios","n":"Tania Axel Rivera Ortiz","t":"56 5098 0705"},
+  {"a":"Sucursal Monterrey","n":"Gael Orlando Ponce Moreno","t":"81 3403 2038"},
+  {"a":"Sucursal Monterrey","n":"Lydia Raquel Sanchez Moreno","t":"81 1600 7598"},
+  {"a":"Sucursal Guadalajara","n":"Iraham Solorzano Hernandez","t":"33 1699 6419"},
+  {"a":"Sucursal Guadalajara","n":"Karla Concepcion Robledo Garcia","t":"33 3662 3446"},
+  {"a":"Sucursal Guadalajara","n":"Margarita Maria del Carmen Vega Mendoza","t":"33 1536 7617"},
+  {"a":"Sucursal Guadalajara","n":"Veronica Lopez Pelayo","t":"33 1532 0479"},
+  {"a":"Sucursal Puebla","n":"Flora Guadalupe Sarmiento","t":"222 670 7434"},
+  {"a":"Sucursal Puebla","n":"Francisco Gerardo Ramirez Barrera","t":"55 4448 0514"},
+  {"a":"Sucursal Puebla","n":"Jocelyn de la Rosa Toxqui","t":"222 448 6148"},
+  {"a":"Sucursal Puebla","n":"Maria Irais Beltran Mendoza","t":"222 754 7736"},
+  {"a":"Especialidades","n":"Dulce Guadalupe Ortiz Meneses","t":"55 8010 2971"},
+  {"a":"Especialidades","n":"Eva Karina Iturriaga Rodriguez","t":"55 2937 2157"},
+  {"a":"Especialidades","n":"Ivoon Lizbeth Nieto Hernandez","t":"56 6225 4625"},
+  {"a":"Especialidades","n":"Marcos Ivan Soto Romero","t":"55 9911 3183"},
+  {"a":"Especialidades","n":"Mayela Briseida Rivas Zamarripa","t":""},
+  {"a":"Showroom","n":"Oscar Omar Sanchez Gomez","t":"55 7953 8429"},
+  {"a":"Showroom","n":"Paola Mejia Villagran","t":""},
+  {"a":"Metro","n":"Alfonso Amador Avila","t":"55 7609 4007"},
+  {"a":"Metro","n":"Alfredo Castellanos Ortiz","t":"55 4347 9279"},
+  {"a":"Metro","n":"Dulce Olivia Ramirez Pavia","t":"55 4566 5381"},
+  {"a":"Metro","n":"Eduardo Alejandro Cabrera Ramirez","t":"55 6135 4316"},
+  {"a":"Metro","n":"Fernando Daniel Sanchez Pacheco","t":"55 6804 8351"},
+  {"a":"Metro","n":"Jhonatan Ulises Aguilar Mota","t":"55 5071 2794"},
+  {"a":"Metro","n":"Jorge Alberto Cleto Mercado","t":"55 1455 6908"},
+  {"a":"Metro","n":"Karina Badillo Morales","t":"55 1455 6904"},
+  {"a":"Metro","n":"Lucia Minerva Cervantes Guerrero","t":"55 2378 8017"},
+  {"a":"Metro","n":"Yuritzia Itzel Sainz Torres","t":"55 4340 8141"},
+  {"a":"Células","n":"Adriana Quintero Gonzalez","t":"55 8007 5624"},
+  {"a":"Células","n":"Alejandra Avalos Sanchez","t":"443 169 4107"},
+  {"a":"Células","n":"Antonio de Jesus Juarez Higuera","t":"667 520 9291"},
+  {"a":"Células","n":"Araceli Claudia Sigala Herrera","t":"55 6801 5049"},
+  {"a":"Células","n":"Carmen Belen Lopez Melendez","t":""},
+  {"a":"Células","n":"Fausto Alejandro Urbina Garcia","t":"444 858 5371"},
+  {"a":"Células","n":"Hector Javier Orozco Cabrera","t":"229 175 6663"},
+  {"a":"Células","n":"Jazmin Hermenegildo Hernandez","t":"55 5409 3489"},
+  {"a":"Células","n":"Manuel Jesus Perez Manzanero","t":"999 126 8603"},
+  {"a":"Células","n":"Mariana Meza Diaz","t":"55 6787 9815"},
+  {"a":"Células","n":"Nancy Fabiola Gutierrez Lopez","t":"56 4165 3051"},
+  {"a":"Células","n":"Noemi Perez Garcia","t":"55 5414 1371"},
+  {"a":"Células","n":"Ruben Montoya Vazquez","t":"642 139 1890"},
+  {"a":"Células","n":"Victor Hugo Leal Uribe","t":"55 3866 1204"},
+  {"a":"Imagen","n":"Ana Maria Sanchez Flores","t":"55 6610 2844"},
+  {"a":"Imagen","n":"Andrea Alejandra Medina Gamboa","t":"999 137 9824"},
+  {"a":"Imagen","n":"Carlos Alberto Tenango Montoya","t":"55 3039 6489"},
+  {"a":"Imagen","n":"Eliane Giovanna Piñon Salinas","t":"55 8074 6429"},
+  {"a":"Imagen","n":"Francisco Javier Lopez Guillon","t":"81 3403 2564"},
+  {"a":"Imagen","n":"Jesus Efrain Serrano Montero","t":"55 3200 9667"},
+  {"a":"Imagen","n":"Juan Guillermo Olvera Ortiz","t":"55 7962 6391"},
+  {"a":"Imagen","n":"Laura Hernandez Ramirez","t":"55 6496 3657"},
+  {"a":"Imagen","n":"Nancy Estefany Calderón Rojas","t":"56 2571 9069"},
+  {"a":"Imagen","n":"Nidia Claudia Jimenez Rivera","t":"55 4537 0514"},
+  {"a":"Imagen","n":"Rey Javier Barrios Yllan","t":"55 1935 0410"}
+];
+const OTRO_ASESOR = '__otro';
+
 
 // ---------- helpers ----------
 function todayISO(){
@@ -1453,7 +1532,7 @@ function render(){
   state.tiempoEntrega = document.getElementById('inTiempoEntrega').value;
   state.asesor = document.getElementById('inAsesor').value;
   state.telefono = document.getElementById('inTelefono').value;
-  if (state.asesor.trim()) document.getElementById('inAsesor').classList.remove('field-error');
+  if (state.asesor.trim()){ document.getElementById('inAsesor').classList.remove('field-error'); document.getElementById('selAsesor').classList.remove('field-error'); document.getElementById('selArea').classList.remove('field-error'); }
   if (state.telefono.trim()) document.getElementById('inTelefono').classList.remove('field-error');
   const descInput = document.getElementById('inDescPct');
   let descPct = Number(descInput.value) || 0;
@@ -1632,6 +1711,81 @@ document.getElementById('btnReset').addEventListener('click', async ()=>{
   render();
 });
 
+// ---------- asesor: primero el área, luego el nombre; el teléfono se llena solo ----------
+const nombreNorm = n => String(n || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+function inicializarAsesor(){
+  const selA = document.getElementById('selArea');
+  const sel = document.getElementById('selAsesor');
+  const inp = document.getElementById('inAsesor');
+  const tel = document.getElementById('inTelefono');
+  const hint = document.getElementById('asesorHint');
+  const areas = [];
+  DIRECTORIO_ASESORES.forEach(a => { if (!areas.includes(a.a)) areas.push(a.a); });
+  selA.innerHTML = '<option value="">Selecciona tu área…</option>'
+    + areas.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')
+    + `<option value="${OTRO_ASESOR}">Otra (no aparezco en la lista)</option>`;
+  const poner = (el, v)=>{ el.value = v; el.dispatchEvent(new Event('input', {bubbles:true})); };
+
+  function modoVacio(){
+    sel.style.display = 'block'; sel.disabled = true;
+    sel.innerHTML = '<option value="">Primero elige tu área…</option>';
+    inp.style.display = 'none';
+    hint.textContent = 'Primero elige tu área y luego tu nombre.';
+  }
+  function modoOtro(){
+    sel.style.display = 'none'; inp.style.display = 'block';
+    hint.textContent = 'Escribe tu nombre completo y tu teléfono.';
+  }
+  function modoArea(area){
+    const lista = DIRECTORIO_ASESORES.filter(a => a.a === area).sort((x,y)=> x.n.localeCompare(y.n, 'es'));
+    sel.innerHTML = '<option value="">Selecciona tu nombre…</option>' + lista.map(a => `<option value="${esc(a.n)}">${esc(a.n)}</option>`).join('');
+    sel.style.display = 'block'; sel.disabled = false;
+    inp.style.display = 'none';
+    hint.textContent = 'Elige tu nombre y se llena tu teléfono.';
+  }
+
+  selA.addEventListener('change', ()=>{
+    const v = selA.value;
+    poner(inp, ''); poner(tel, '');
+    if (v === '') modoVacio();
+    else if (v === OTRO_ASESOR){ modoOtro(); inp.focus(); }
+    else modoArea(v);
+    selA.classList.remove('field-error'); sel.classList.remove('field-error');
+  });
+  sel.addEventListener('change', ()=>{
+    const a = DIRECTORIO_ASESORES.find(x => x.n === sel.value);
+    if (!a){
+      poner(inp, ''); poner(tel, '');
+      hint.textContent = 'Elige tu nombre y se llena tu teléfono.';
+    } else {
+      poner(inp, a.n); poner(tel, a.t);
+      if (a.t){
+        hint.textContent = 'Teléfono tomado del directorio; corrígelo si cambió.';
+      } else {
+        hint.textContent = 'Tu teléfono no está en el directorio: escríbelo en el campo de abajo.';
+        tel.focus();
+      }
+    }
+    sel.classList.remove('field-error'); selA.classList.remove('field-error');
+  });
+
+  // al abrir la página: recuperar al asesor que ya se había elegido en este navegador
+  const guardado = inp.value.trim();
+  modoVacio();
+  if (guardado){
+    const a = DIRECTORIO_ASESORES.find(x => nombreNorm(x.n) === nombreNorm(guardado));
+    if (a){
+      selA.value = a.a; modoArea(a.a); sel.value = a.n;
+      if (!tel.value.trim() && a.t) poner(tel, a.t);
+      hint.textContent = 'Teléfono tomado del directorio; corrígelo si cambió.';
+    } else {
+      selA.value = OTRO_ASESOR; modoOtro();
+    }
+  } else {
+    selA.value = '';
+  }
+}
+
 function validateRequiredFields(){
   const campos = [
     ['inCliente', 'nombre del cliente'],
@@ -1640,10 +1794,14 @@ function validateRequiredFields(){
     ['inTelefono', 'teléfono del asesor']
   ];
   const missing = [];
+  ['selAsesor', 'selArea'].forEach(i => document.getElementById(i).classList.remove('field-error'));
   campos.forEach(([id, nombre])=>{
     const el = document.getElementById(id);
     el.classList.remove('field-error');
-    if (!el.value.trim()) missing.push([el, nombre]);
+    const selN = document.getElementById('selAsesor');
+    // si el nombre se elige del desplegable se marca ese; si aún no eligen área, se marca el área
+    const visible = (id === 'inAsesor' && el.style.display === 'none') ? (selN.disabled ? document.getElementById('selArea') : selN) : el;
+    if (!el.value.trim()) missing.push([visible, nombre]);
   });
   if (missing.length){
     missing.forEach(([el])=> el.classList.add('field-error'));
@@ -1943,6 +2101,7 @@ document.getElementById('pvLogo').src = 'data:image/png;base64,' + LOGO_B64;
   try{ const saved = localStorage.getItem('hergom_' + id); if (saved) el.value = saved; }catch(e){}
   el.addEventListener('input', ()=>{ try{ localStorage.setItem('hergom_' + id, el.value); }catch(e){} });
 });
+inicializarAsesor();
 renderItemsEditor();
 render();
 renderSavedList();
