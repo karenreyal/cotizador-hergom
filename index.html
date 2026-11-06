@@ -1039,6 +1039,10 @@ async function logQuoteToSheet(){
 const CAT_LS = 'hergom_catalogo_v1';
 let catalogoMeta = {fuente: '', fecha: '', motivo: ''};
 let catalogoCargadoTs = 0;
+// Lista de precios automática: un robot lee la lista maestra de SharePoint y publica estos dos archivos junto a la página.
+const CAT_AUTO_BASE = 'https://karenreyal.github.io/cotizador-hergom/';
+const CAT_AUTO_HORAS_SIN_REVISAR = 60;   // si el robot no revisa en tantas horas, se avisa
+let catalogoEstado = null;
 
 function normCatalogo(arr){
   const num = v => { const n = Number(v); return (isFinite(n) && n > 0) ? Math.round(n * 100) / 100 : 0; };
@@ -1068,7 +1072,22 @@ function mostrarEstadoCatalogo(){
   const n = PRODUCTS.length;
   const m = catalogoMeta;
   let txt = '', cls = 'hint cat-status';
-  if (m.fuente === 'online'){
+  if (m.fuente === 'auto'){
+    txt = '✓ Lista de precios de la empresa · ' + n + ' productos' + (m.fecha ? ' · actualizada el ' + fmtFechaHora(m.fecha) : '');
+    cls += ' sync-synced';
+    const e = catalogoEstado;
+    if (e && e.resultado === 'error'){
+      const det = String(e.mensaje || 'sin detalle').slice(0, 140);
+      txt += ' — ⚠ la última revisión automática falló (' + det + '). Se muestra la última lista que sí se pudo leer; confirma los precios antes de enviar.';
+      cls = 'hint cat-status sync-offline';
+    } else if (e && e.revisado){
+      const horas = (Date.now() - new Date(e.revisado).getTime()) / 36e5;
+      if (isFinite(horas) && horas > CAT_AUTO_HORAS_SIN_REVISAR){
+        txt += ' — ⚠ la revisión automática no se ha ejecutado desde el ' + fmtFechaHora(e.revisado) + '. Confirma los precios antes de enviar.';
+        cls = 'hint cat-status sync-offline';
+      }
+    }
+  } else if (m.fuente === 'online'){
     txt = '✓ Catálogo en línea · ' + n + ' productos' + (m.fecha ? ' · vigente desde ' + fmtFechaHora(m.fecha) : '');
     cls += ' sync-synced';
   } else if (m.fuente === 'cache'){
@@ -1107,11 +1126,36 @@ function usarCatalogoRespaldo(motivo){
   }
 }
 
-async function cargarCatalogo(){
+async function pedirJson(url, ms){
+  const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const timer = ctl ? setTimeout(()=> ctl.abort(), ms) : null;
+  try{
+    const res = await fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), ctl ? {signal: ctl.signal, cache: 'no-store'} : {cache: 'no-store'});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+// 1) lista automática publicada con la página (la actualiza el robot a partir de la lista maestra de SharePoint)
+async function cargarCatalogoAuto(){
+  const data = await pedirJson(CAT_AUTO_BASE + 'catalogo.json', 15000);
+  if (!data || data.ok === false || !Array.isArray(data.productos)) throw new Error('respuesta inesperada');
+  const lista = normCatalogo(data.productos);
+  if (!lista.length) throw new Error('el catálogo llegó vacío');
+  let estado = null;
+  try{ estado = await pedirJson(CAT_AUTO_BASE + 'estado.json', 8000); }catch(e){ estado = null; }
+  catalogoEstado = (estado && typeof estado === 'object') ? estado : null;
+  try{ localStorage.setItem(CAT_LS, JSON.stringify({ts: new Date().toISOString(), fecha: data.actualizado || '', productos: lista})); }catch(e){}
+  catalogoCargadoTs = Date.now();
+  aplicarCatalogo(lista, 'auto', data.actualizado || '');
+}
+
+// 2) hoja de Google (Apps Script): se conserva como segunda opción
+async function cargarCatalogoScript(){
   const url = syncUrlWithAction('catalogo');
   if (!url){ usarCatalogoRespaldo('no hay URL de sincronización'); return; }
-  catalogoMeta = {fuente: '', fecha: '', motivo: ''};
-  mostrarEstadoCatalogo();
   const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   const timer = ctl ? setTimeout(()=> ctl.abort(), 20000) : null;
   try{
@@ -1123,12 +1167,25 @@ async function cargarCatalogo(){
     if (!lista.length) throw new Error('el catálogo llegó vacío');
     try{ localStorage.setItem(CAT_LS, JSON.stringify({ts: new Date().toISOString(), fecha: data.actualizado || '', productos: lista})); }catch(e){}
     catalogoCargadoTs = Date.now();
+    catalogoEstado = null;
     aplicarCatalogo(lista, 'online', data.actualizado || '');
   }catch(err){
     usarCatalogoRespaldo(err && err.name === 'AbortError' ? 'tardó demasiado en responder' : (err && err.message ? err.message : String(err)));
   }finally{
     if (timer) clearTimeout(timer);
   }
+}
+
+async function cargarCatalogo(){
+  catalogoMeta = {fuente: '', fecha: '', motivo: ''};
+  mostrarEstadoCatalogo();
+  try{
+    await cargarCatalogoAuto();
+    return;
+  }catch(err){
+    // aún no hay lista automática o no se pudo descargar: se intenta con la hoja de Google
+  }
+  await cargarCatalogoScript();
 }
 
 document.getElementById('btnCatRefresh').addEventListener('click', cargarCatalogo);
