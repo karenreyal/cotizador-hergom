@@ -161,6 +161,7 @@ def procesar(texto):
     for p in productos:
         if p['pd'] and p['pp'] and p['pd'] > p['pp'] * 1.0001:
             avisos.append('Precio distribuidor mayor que el público: ' + p['clave'])
+    avisos = list(dict.fromkeys(avisos))  # sin repetidos, conservando el orden
     chk = {'sumaPD': round(suma_pd, 2), 'sumaPP': round(suma_pp, 2), 'totalPD': total_pd, 'totalPP': total_pp}
     return productos, avisos, chk
 
@@ -273,11 +274,11 @@ def cmd_construir(a):
         'fuente': a.fuente,
         'productos': len(productos),
         'cambios': cambios,
-        'avisos': avisos[:20],
+        'avisos': avisos[:30],
         'verificacion': msg_total,
     })
     print('OK: %d productos · %s · cambios %s · avisos %d' % (len(productos), msg_total, cambios, len(avisos)))
-    for av in avisos[:20]:
+    for av in avisos[:30]:
         print('  aviso:', av)
     return 0
 

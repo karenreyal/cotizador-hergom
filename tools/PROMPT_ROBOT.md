@@ -13,7 +13,7 @@ Si esa URI falla con "not found", búscalo con sharepoint_search (query "Lista P
 
 PASOS
 0. Si las herramientas del conector de Microsoft 365 (sharepoint_search, read_resource) o las de repositorios (add_repo, register_repo_root) aparecen como diferidas, cárgalas con ToolSearch.
-1. Repositorio: add_repo owner karenreyal, repo cotizador-hergom, access push. Clónalo como indique la herramienta, regístralo con register_repo_root y ejecuta `git pull`. Trabaja siempre dentro del clon.
+1. Repositorio: si la sesión ya trae el clon de karenreyal/cotizador-hergom, úsalo; si no, add_repo (owner karenreyal, repo cotizador-hergom, access push), clónalo como indique la herramienta y regístralo con register_repo_root. Ejecuta `git checkout main` y `git pull`. Trabaja siempre dentro del clon.
 2. Fecha de la lista maestra: con sharepoint_search (mismos filtros del punto FUENTE) toma el lastModifiedDateTime del archivo maestro. Llámalo MODIFICADO (ISO, termina en Z).
 3. Lee `estado.json` del repo. Si su resultado NO es "error" y su fuenteModificado es igual a MODIFICADO, no hay cambios: ejecuta `python3 tools/construir_catalogo.py estado --resultado sin_cambios --modificado <MODIFICADO>`. Haz commit y push de estado.json SOLO si la fecha de `revisado` del estado anterior es de un día anterior al de hoy (hora de Ciudad de México): es el latido diario. Si no, descarta el cambio con `git checkout estado.json`. Termina con el reporte "sin cambios".
 4. Si cambió (o el estado anterior era error), lee el archivo con read_resource (misma URI, startPage 1 y endPage 1).

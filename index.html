@@ -1067,6 +1067,20 @@ function fmtFechaHora(iso){
   return d.toLocaleString('es-MX', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
 }
 
+// Aviso si el robot que actualiza la lista de precios falló o lleva días sin revisar (lo escribe en estado.json)
+function avisoRobot(){
+  const e = catalogoEstado;
+  if (!e || typeof e !== 'object') return '';
+  if (e.resultado === 'error'){
+    return '⚠ la última revisión automática de la lista de precios falló (' + String(e.mensaje || 'sin detalle').slice(0, 160) + '). Confirma los precios vigentes antes de enviar.';
+  }
+  const horas = (Date.now() - new Date(e.revisado).getTime()) / 36e5;
+  if (isFinite(horas) && horas > CAT_AUTO_HORAS_SIN_REVISAR){
+    return '⚠ la revisión automática de la lista de precios no se ha ejecutado desde el ' + fmtFechaHora(e.revisado) + '. Confirma los precios vigentes antes de enviar.';
+  }
+  return '';
+}
+
 function mostrarEstadoCatalogo(){
   const el = document.getElementById('catStatus');
   const n = PRODUCTS.length;
@@ -1075,18 +1089,6 @@ function mostrarEstadoCatalogo(){
   if (m.fuente === 'auto'){
     txt = '✓ Lista de precios de la empresa · ' + n + ' productos' + (m.fecha ? ' · actualizada el ' + fmtFechaHora(m.fecha) : '');
     cls += ' sync-synced';
-    const e = catalogoEstado;
-    if (e && e.resultado === 'error'){
-      const det = String(e.mensaje || 'sin detalle').slice(0, 140);
-      txt += ' — ⚠ la última revisión automática falló (' + det + '). Se muestra la última lista que sí se pudo leer; confirma los precios antes de enviar.';
-      cls = 'hint cat-status sync-offline';
-    } else if (e && e.revisado){
-      const horas = (Date.now() - new Date(e.revisado).getTime()) / 36e5;
-      if (isFinite(horas) && horas > CAT_AUTO_HORAS_SIN_REVISAR){
-        txt += ' — ⚠ la revisión automática no se ha ejecutado desde el ' + fmtFechaHora(e.revisado) + '. Confirma los precios antes de enviar.';
-        cls = 'hint cat-status sync-offline';
-      }
-    }
   } else if (m.fuente === 'online'){
     txt = '✓ Catálogo en línea · ' + n + ' productos' + (m.fecha ? ' · vigente desde ' + fmtFechaHora(m.fecha) : '');
     cls += ' sync-synced';
@@ -1101,7 +1103,9 @@ function mostrarEstadoCatalogo(){
     txt = '⏳ Cargando catálogo en línea…';
     cls += ' sync-syncing';
   }
-  if (m.motivo && m.fuente !== 'online') txt += ' (' + m.motivo + ')';
+  if (m.motivo && m.fuente !== 'online' && m.fuente !== 'auto') txt += ' (' + m.motivo + ')';
+  const av = m.fuente ? avisoRobot() : '';
+  if (av){ txt += ' — ' + av; cls = 'hint cat-status sync-offline'; }
   el.textContent = txt;
   el.className = cls;
 }
@@ -1139,13 +1143,12 @@ async function pedirJson(url, ms){
 }
 
 // 1) lista automática publicada con la página (la actualiza el robot a partir de la lista maestra de SharePoint)
-async function cargarCatalogoAuto(){
-  const data = await pedirJson(CAT_AUTO_BASE + 'catalogo.json', 15000);
+async function cargarCatalogoAuto(pEstado){
+  const data = await pedirJson(CAT_AUTO_BASE + 'catalogo.json', 10000);
   if (!data || data.ok === false || !Array.isArray(data.productos)) throw new Error('respuesta inesperada');
   const lista = normCatalogo(data.productos);
   if (!lista.length) throw new Error('el catálogo llegó vacío');
-  let estado = null;
-  try{ estado = await pedirJson(CAT_AUTO_BASE + 'estado.json', 8000); }catch(e){ estado = null; }
+  const estado = await pEstado;
   catalogoEstado = (estado && typeof estado === 'object') ? estado : null;
   try{ localStorage.setItem(CAT_LS, JSON.stringify({ts: new Date().toISOString(), fecha: data.actualizado || '', productos: lista})); }catch(e){}
   catalogoCargadoTs = Date.now();
@@ -1167,7 +1170,6 @@ async function cargarCatalogoScript(){
     if (!lista.length) throw new Error('el catálogo llegó vacío');
     try{ localStorage.setItem(CAT_LS, JSON.stringify({ts: new Date().toISOString(), fecha: data.actualizado || '', productos: lista})); }catch(e){}
     catalogoCargadoTs = Date.now();
-    catalogoEstado = null;
     aplicarCatalogo(lista, 'online', data.actualizado || '');
   }catch(err){
     usarCatalogoRespaldo(err && err.name === 'AbortError' ? 'tardó demasiado en responder' : (err && err.message ? err.message : String(err)));
@@ -1179,11 +1181,14 @@ async function cargarCatalogoScript(){
 async function cargarCatalogo(){
   catalogoMeta = {fuente: '', fecha: '', motivo: ''};
   mostrarEstadoCatalogo();
+  const pEstado = pedirJson(CAT_AUTO_BASE + 'estado.json', 8000).catch(()=> null);   // se pide a la vez que la lista
   try{
-    await cargarCatalogoAuto();
+    await cargarCatalogoAuto(pEstado);
     return;
   }catch(err){
     // aún no hay lista automática o no se pudo descargar: se intenta con la hoja de Google
+    const est = await pEstado;
+    catalogoEstado = (est && typeof est === 'object') ? est : null;
   }
   await cargarCatalogoScript();
 }
