@@ -1,11 +1,12 @@
 # Actualización automática de la lista de precios
 
 El cotizador (`index.html`) abre primero `catalogo.json` y `estado.json`, que viven junto a la página.
-Un robot (tarea programada de Claude, ver `PROMPT_ROBOT.md`) los mantiene al día:
+Un robot (tarea programada de Claude, ver `PROMPT_ROBOT.md`) los mantiene al día. Corre una vez al día, de lunes a sábado a las 7:17 (hora de Ciudad de México):
 
-1. Revisa la fecha de modificación de la lista maestra de SharePoint
-   (`Lista Precios Hergom Vet - 2026.xlsx`, carpeta DRIVE COMERCIAL HERGOM / 01 LISTAS DE PRECIOS GENERAL / VETERINARIA).
-2. Si cambió, la lee con el conector de Microsoft 365 de la cuenta de Karen (no se usa Power Automate, ni Azure, ni nada que requiera permisos de TI).
+1. Lee la lista maestra de SharePoint (`Lista Precios Hergom Vet - 2026.xlsx`, carpeta DRIVE COMERCIAL HERGOM / 01 LISTAS DE PRECIOS GENERAL / VETERINARIA)
+   con el conector de Microsoft 365 de la cuenta de Karen (no se usa Power Automate, ni Azure, ni nada que requiera permisos de TI).
+   No se fía de la fecha de modificación que da el buscador de SharePoint, porque puede ir horas atrasada: siempre lee el archivo.
+2. Compara contra lo ya publicado. Si no hay diferencias, no vuelve a publicar la lista y solo actualiza `estado.json` (la fecha de la última revisión).
 3. `python3 tools/construir_catalogo.py construir ...` convierte el texto en `catalogo.json` y solo lo publica si pasa las verificaciones:
    la suma de precios de las filas debe coincidir con la fila TOTAL de la propia hoja, no puede bajar más de 30% el número de productos, etc.
 4. Hace commit y push; GitHub Pages lo publica en 1 o 2 minutos.
