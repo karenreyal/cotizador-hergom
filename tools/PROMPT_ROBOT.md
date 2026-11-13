@@ -1,7 +1,7 @@
 # Robot de la lista de precios (tarea programada de Claude)
 
 Este es el texto de la tarea programada que mantiene al día `catalogo.json` y `estado.json`.
-Si la tarea se pierde, se vuelve a crear con este mismo texto (lunes a sábado, 7:17, 12:43 y 17:52, hora de Ciudad de México).
+Si la tarea se pierde, se vuelve a crear con este mismo texto (lunes a sábado, 7:17, 12:17 y 17:17, hora de Ciudad de México; cron `CRON_TZ=America/Mexico_City 17 7,12,17 * * 1-6`).
 
 ---
 
@@ -15,9 +15,9 @@ PASOS
 0. Si las herramientas del conector de Microsoft 365 (sharepoint_search, read_resource) o las de repositorios (add_repo, register_repo_root) aparecen como diferidas, cárgalas con ToolSearch.
 1. Repositorio: si la sesión ya trae el clon de karenreyal/cotizador-hergom, úsalo; si no, add_repo (owner karenreyal, repo cotizador-hergom, access push), clónalo como indique la herramienta y regístralo con register_repo_root. Ejecuta `git checkout main` y `git pull`. Trabaja siempre dentro del clon.
 2. Fecha de la lista maestra: con sharepoint_search (mismos filtros del punto FUENTE) toma el lastModifiedDateTime del archivo maestro. Llámalo MODIFICADO (ISO, termina en Z).
-3. Lee `estado.json` del repo. Si su resultado NO es "error" y su fuenteModificado es igual a MODIFICADO, no hay cambios: ejecuta `python3 tools/construir_catalogo.py estado --resultado sin_cambios --modificado <MODIFICADO>`. Haz commit y push de estado.json SOLO si la fecha de `revisado` del estado anterior es de un día anterior al de hoy (hora de Ciudad de México): es el latido diario. Si no, descarta el cambio con `git checkout estado.json`. Termina con el reporte "sin cambios".
-4. Si cambió (o el estado anterior era error), lee el archivo con read_resource (misma URI, startPage 1 y endPage 1).
-   - Si el conector responde que el archivo supera el límite de 100 MB: ejecuta `python3 tools/construir_catalogo.py estado --resultado error --mensaje "La lista maestra pesa <X> MB y el conector solo lee hasta 100 MB: hay que comprimir las imágenes del Excel"` (X = tamaño que indique el conector). Haz commit y push de estado.json solo si el mensaje cambió respecto al estado anterior o es un día nuevo. Termina con el reporte.
+3. Lee `estado.json` del repo (si no existe, trátalo como "sin estado"). Si su resultado NO es "error" y su fuenteModificado es igual a MODIFICADO, no hay cambios: ejecuta `python3 tools/construir_catalogo.py estado --resultado sin_cambios --modificado <MODIFICADO>`. Haz commit y push de estado.json SOLO si la fecha de `revisado` del estado anterior es de un día anterior al de hoy (hora de Ciudad de México): es el latido diario. Si no, descarta el cambio con `git checkout estado.json`. Termina con el reporte "sin cambios".
+4. Si cambió (o el estado anterior era error, o no había estado), lee el archivo con read_resource (misma URI, startPage 1 y endPage 1).
+   - Si el conector responde que el archivo supera el límite de 100 MB: ejecuta `python3 tools/construir_catalogo.py estado --resultado error --modificado <MODIFICADO> --mensaje "La lista maestra pesa <X> MB y el conector solo lee hasta 100 MB: hay que comprimir las imágenes del Excel"` (X = tamaño que indique el conector). Haz commit y push de estado.json solo si el mensaje cambió respecto al estado anterior o es un día nuevo (si no, descarta con `git checkout estado.json`). Termina con el reporte; si el error es el mismo de la corrida anterior, el reporte es una sola línea.
    - Si falla por otra causa, reintenta una vez. Si persiste, guarda el error igual que arriba con el mensaje real.
    - La hoja que sirve es la que tiene el encabezado Clave / Precio Distribuidor / Precio Público (normalmente la primera, "Veterinaria"). Si el libro trae varias hojas y la primera no es esa, lee la correcta con startPage.
 5. Copia la hoja a un archivo de texto (por ejemplo /tmp/lista.tsv) con la herramienta Write: desde la línea del encabezado (la que contiene "Clave") hasta la fila TOTAL, inclusive. Copia el texto idéntico, carácter por carácter, con los tabuladores originales entre celdas. No resumas, no omitas filas, no corrijas, no reformatees números ni acentos, no agregues nada. Si es demasiado largo para una sola escritura, escríbelo en partes (/tmp/lista_1.tsv, /tmp/lista_2.tsv...) y únelas con `cat` sin cambiar nada.
