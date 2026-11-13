@@ -561,6 +561,8 @@
       </div>
 
       <div class="section-title">Plan de financiamiento</div>
+      <div class="hint fin-no-aplica" id="finNoAplica" style="display:none;"></div>
+      <div id="finEditor">
       <div class="row2 field-group">
         <div>
           <label for="inComisionPct">Comisión apertura (%)</label>
@@ -578,7 +580,8 @@
           <div class="hint">Mínimo autorizado: 30%</div>
         </div>
       </div>
-      <div class="hint">Calcula automáticamente a 6, 12 y 18 meses sin intereses (MSI) y a 24 meses con 7% de interés sobre el pago restante.</div>
+      <div class="hint">Calcula automáticamente a 6, 12 y 18 meses sin intereses (MSI) y a 24 meses con 7% de interés sobre el pago restante. Solo aplica en compras mayores a $60,000.</div>
+      </div><!-- /finEditor -->
       </div><!-- /ppSections -->
 
       <div class="section-title">Notas</div>
@@ -698,6 +701,7 @@ Incluye instalación y capacitación</textarea>
           </div>
 
           <div class="section-block">
+            <div id="finBlock">
             <div class="banner">PLAN DE FINANCIAMIENTO</div>
             <div class="fin-kv">
               <div class="kv-row"><b>Monto indicado</b><span id="pvMontoIndicado">$0.00</span></div>
@@ -705,6 +709,7 @@ Incluye instalación y capacitación</textarea>
               <div class="kv-row"><b>Enganche (%)</b><span id="pvEnganchePct">20%</span></div>
             </div>
             <table class="fin-table" id="finTable"></table>
+            </div><!-- /finBlock -->
             <div class="notes" id="pvNotes"></div>
           </div>
           </div><!-- /pvPPBlocks -->
@@ -754,6 +759,8 @@ const TASAS = {
   24: {20:0.07, 25:0.07, 30:0.07, 35:0.07, 40:0.07, 45:0.07, 50:0.07}
 };
 const PLAZOS = [6, 12, 18, 24];
+// El plan de financiamiento (enganche + 6, 12, 18 y 24 meses) solo aplica en compras mayores a este monto (IVA incluido)
+const FINANCIAMIENTO_MINIMO = 60000;
 const PLAZO_ETIQUETA = {6: '6 MSI', 12: '12 MSI', 18: '18 MSI', 24: '24 meses'};
 
 let state = {
@@ -1695,7 +1702,7 @@ function render(){
   document.getElementById('editorTotalHint').textContent = PD ? ('Subtotal ' + money(subtotal) + ' + IVA 16% ' + money(iva)) : '';
   document.getElementById('tipoHint').textContent = PD
     ? 'Cotización a precio distribuidor: se muestran las partidas con su precio de lista y se suma el IVA (16%). No incluye descuento por contado ni financiamiento.'
-    : 'Cotización a precio público: precio con IVA incluido, descuento por pago de contado (máximo 20%) y plan de financiamiento.';
+    : 'Cotización a precio público: precio con IVA incluido, descuento por pago de contado (máximo 20%) y, en compras mayores a $60,000, plan de financiamiento.';
   document.getElementById('ppSections').style.display = PD ? 'none' : '';
   document.getElementById('pvPPBlocks').style.display = PD ? 'none' : '';
   document.getElementById('pdNotesBlock').style.display = PD ? '' : 'none';
@@ -1707,7 +1714,14 @@ function render(){
   document.getElementById('pvMesesTarjeta').textContent = state.mesesTarjeta;
   document.getElementById('pvMontoTarjeta').textContent = money(total / state.mesesTarjeta);
 
-  // plan de financiamiento
+  // plan de financiamiento: solo en compras mayores a $60,000
+  const finAplica = redondear2(total) > FINANCIAMIENTO_MINIMO;
+  document.getElementById('finBlock').style.display = finAplica ? '' : 'none';
+  document.getElementById('finEditor').style.display = finAplica ? '' : 'none';
+  const finAviso = document.getElementById('finNoAplica');
+  finAviso.style.display = finAplica ? 'none' : '';
+  finAviso.textContent = 'El plan de financiamiento solo aplica en compras mayores a ' + money(FINANCIAMIENTO_MINIMO) +
+    (total > 0 ? ' (esta cotización suma ' + money(total) + '), por eso no se incluye en el PDF.' : '.');
   document.getElementById('pvMontoIndicado').textContent = money(total);
   document.getElementById('pvComisionPct').textContent = pct(state.comisionPct);
   document.getElementById('pvEnganchePct').textContent = pct(state.enganchePct);
