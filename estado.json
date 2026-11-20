@@ -1,10 +1,22 @@
 {
-  "revisado": "2026-11-20T13:21:15Z",
-  "resultado": "error",
-  "mensaje": "La lista maestra pesa 127.8 MB y el conector solo lee hasta 100 MB: hay que comprimir las imágenes del Excel",
-  "fuenteModificado": "2026-11-19T23:23:55.000Z",
-  "fuente": "",
-  "productos": 0,
-  "cambios": {},
-  "avisos": []
+  "revisado": "2026-11-20T17:20:56Z",
+  "resultado": "ok",
+  "mensaje": "",
+  "fuenteModificado": "2026-11-20T17:17:09Z",
+  "fuente": "LISTA VET.xlsx",
+  "productos": 220,
+  "cambios": {
+    "nuevos": 0,
+    "quitados": 0,
+    "precios": 0,
+    "textos": 0
+  },
+  "avisos": [
+    "Clave repetida con precios distintos (se usa la primera): 009-003702-00",
+    "Clave repetida con precios distintos (se usa la primera): P8-2MV",
+    "Clave repetida con precios distintos (se usa la primera): P10-4SV",
+    "Clave repetida con precios distintos (se usa la primera): P8-2S",
+    "Falta el precio público (revisa la celda): V-3CFL30V"
+  ],
+  "verificacion": "Lectura directa del conector, sin fila TOTAL en la hoja (filas completas: 340 de 340)"
 }

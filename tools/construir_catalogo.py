@@ -105,6 +105,10 @@ def buscar_encabezado(filas):
                 col['cat'] = j
             elif c == 'categoria' and 'cat' not in col:
                 col['cat'] = j
+            elif c.startswith('cat') and 'general' in c and 'cat' not in col:
+                col['cat'] = j  # tolera erratas como "CATERGORÍA GENERAL"
+            elif c in ('nota', 'notas') and 'nota' not in col:
+                col['nota'] = j
             elif 'distribuidor' in c and 'con iva' not in c and 'pd' not in col:
                 col['pd'] = j
             elif 'publico' in c and 'pp' not in col:
@@ -140,6 +144,9 @@ def procesar(texto):
             continue
         filas_datos += 1
         if not pd_v and not pp_v:
+            txt_precio = norm(f[col['pd']]) + ' ' + norm(f[col['pp']])
+            if 'cotizable' in txt_precio or 'proximamente' in txt_precio:
+                continue  # "COTIZABLE" / "¡Próximamente!": todavía no tiene precio de lista
             avisos.append('Sin precio: ' + clave)
             continue
         item = {
@@ -150,6 +157,8 @@ def procesar(texto):
             'pp': round(pp_v, 2) if pp_v else 0,
             'pd': round(pd_v, 2) if pd_v else 0,
         }
+        if 'nota' in col and f[col['nota']].strip():
+            item['nota'] = f[col['nota']].strip()
         k = clave.upper()
         if k in vistos:
             ant = vistos[k]
@@ -161,13 +170,44 @@ def procesar(texto):
     for p in productos:
         if p['pd'] and p['pp'] and p['pd'] > p['pp'] * 1.0001:
             avisos.append('Precio distribuidor mayor que el público: ' + p['clave'])
+        if not p['pp']:
+            avisos.append('Falta el precio público (revisa la celda): ' + p['clave'])
+        elif not p['pd']:
+            avisos.append('Falta el precio distribuidor (revisa la celda): ' + p['clave'])
     avisos = list(dict.fromkeys(avisos))  # sin repetidos, conservando el orden
     chk = {'sumaPD': round(suma_pd, 2), 'sumaPP': round(suma_pp, 2), 'totalPD': total_pd, 'totalPP': total_pp}
     return productos, avisos, chk
 
 
-def verificar_total(chk):
+def verificar_filas(texto):
+    """Compara las filas que trae el texto con las que declara el conector ("N rows x M columns").
+    Devuelve (ok, mensaje); ok=None si el texto no trae esa declaración (copia manual)."""
+    m = re.search(r'##\s*Sheet:.*?—\s*(\d+)\s*rows', texto)
+    if not m:
+        return None, ''
+    declaradas = int(m.group(1))
+    lineas = texto.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    ini = next((i for i, l in enumerate(lineas) if l.startswith('## Sheet:')), None)
+    cuerpo = []
+    for l in lineas[ini + 1:]:
+        if l.startswith('Formulas:'):
+            break
+        cuerpo.append(l)
+    while cuerpo and not cuerpo[0].strip():
+        cuerpo.pop(0)  # línea en blanco entre el título de la hoja y las filas
+    n = 0
+    for l in cuerpo:
+        mm = re.fullmatch(r'\[(\d+) empty rows?\]', l.strip())
+        n += int(mm.group(1)) if mm else 1
+    if n != declaradas:
+        return False, 'La lectura parece incompleta: la hoja declara %d filas y el texto trae %d.' % (declaradas, n)
+    return True, 'filas completas: %d de %d' % (n, declaradas)
+
+
+def verificar_total(chk, directo=False, filas=(None, '')):
     if chk['totalPD'] is None and chk['totalPP'] is None:
+        if directo and filas[0]:
+            return True, 'Lectura directa del conector, sin fila TOTAL en la hoja (' + filas[1] + ')'
         return False, 'La hoja no trae fila TOTAL: no se pudo verificar la copia.'
     errs = []
     if chk['totalPD'] is not None and abs(chk['sumaPD'] - chk['totalPD']) > TOLERANCIA_TOTAL:
@@ -224,12 +264,33 @@ def escribir_estado(dir_, prueba, resultado, mensaje='', modificado='', extra=No
     return est
 
 
+def leer_texto_json(ruta_json):
+    """Lee el resultado de read_resource que la herramienta guardó en un archivo (lista de {type, text}),
+    o un texto plano. Así no hay que copiar la hoja a mano."""
+    raw = open(ruta_json, encoding='utf-8').read()
+    try:
+        d = json.loads(raw)
+    except ValueError:
+        return raw
+    if isinstance(d, dict):
+        d = d.get('content', d)
+        if isinstance(d, dict):
+            return d.get('text', raw)
+    if isinstance(d, list):
+        return ''.join(x.get('text', '') for x in d if isinstance(x, dict) and x.get('type', 'text') == 'text')
+    return raw
+
+
 def cmd_construir(a):
-    texto = open(a.tsv, encoding='utf-8').read()
+    directo = bool(a.json)
+    texto = leer_texto_json(a.json) if directo else open(a.tsv, encoding='utf-8').read()
     fuente_mod = a.modificado
     try:
+        filas_ok, filas_msg = verificar_filas(texto)
+        if filas_ok is False:
+            raise ValueError(filas_msg)
         productos, avisos, chk = procesar(texto)
-        ok_total, msg_total = verificar_total(chk)
+        ok_total, msg_total = verificar_total(chk, directo, (filas_ok, filas_msg))
         previo = leer_json(ruta(a.dir, 'catalogo.json', a.prueba))
         n_prev = len(previo.get('productos', [])) if previo else 0
         problemas = []
@@ -293,7 +354,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest='cmd', required=True)
     c = sub.add_parser('construir')
-    c.add_argument('--tsv', required=True)
+    g = c.add_mutually_exclusive_group(required=True)
+    g.add_argument('--tsv', help='texto de la hoja copiado a un archivo')
+    g.add_argument('--json', help='archivo donde la herramienta guardó el resultado de read_resource (sin copiar a mano)')
     c.add_argument('--modificado', default='')
     c.add_argument('--fuente', default='Lista Precios Hergom Vet - 2026.xlsx')
     c.add_argument('--dir', default='.')
