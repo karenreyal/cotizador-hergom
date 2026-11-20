@@ -27,8 +27,13 @@ Si algún día LISTA VET pasara de 100 MB, el robot lo reporta en `estado.json` 
 - Si falta PD o PP en una fila, publica el producto con aviso (revisa la celda). Si dice "¡Próximamente!" o "Cotizable" en lugar de precio, lo omite.
 - Una fila TOTAL (suma de precios) no es obligatoria con la lectura directa; solo se exige cuando el texto se copia a mano.
 
+## Excepciones (tools/excepciones.json)
+Archivo que el robot solo lee (no lo modifica). Sirve para casos que la lista no resuelve por sí sola:
+- `precios`: precio de respaldo para una clave, que se usa SOLO si la celda de la lista no trae un número (por ejemplo, si trae un punto). Si la lista vuelve a traer el número, manda la lista y `estado.json` avisa que la excepción ya se puede quitar. Hoy: V-3CFL30V con PP $2,645 (pedido de Karen, 2026-11-20).
+- `cotizables`: claves que se publican sin precio, marcadas `"cotizable": true`, aunque la lista diga "¡Próximamente!" o "Cotizable". En la página salen con la leyenda "Cotizable" y el vendedor captura el precio en la partida. Hoy: MAESTRO-ELITE. Los demás productos con "Próximamente" o "COTIZABLE" (VETUSE5ADV, VETUSE3-1S, VeLED-E3M, y las 5 resonancias O-SCAN-VET, G-SCAN-EQUINE, GRANDE-ELITE-VET, MAGINIFICO-VET y SUPREME-VET) no se publican.
+
 ## Archivos
-- `catalogo.json`: productos (clave, descripción, marca, categoría, precio público con IVA `pp`, precio distribuidor sin IVA `pd`, y `nota` si la hoja la trae) y la fecha de la lista (`actualizado`).
+- `catalogo.json`: productos (clave, descripción, marca, categoría, precio público con IVA `pp`, precio distribuidor sin IVA `pd`, y `nota` si la hoja la trae) y la fecha de la lista (`actualizado`). Los productos cotizables llevan `"cotizable": true` y precios en 0.
 - `estado.json`: última revisión, resultado (`ok`, `sin_cambios`, `error`), mensaje, cambios (nuevos, quitados, precios, textos) y avisos (por ejemplo, claves repetidas o precios faltantes).
 - `tools/construir_catalogo.py`: convierte y verifica. Con `--prueba` escribe archivos `*-prueba.json` sin tocar los reales (bórralos después).
 

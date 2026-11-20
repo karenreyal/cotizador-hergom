@@ -19,6 +19,12 @@ Uso:
           (lista de {type, text}); no hay que copiar nada a mano.
   --tsv   texto pegado a mano (solo si la respuesta llegó en línea).
 
+Excepciones (tools/excepciones.json, junto a este script):
+  "precios":    {"CLAVE": {"pp": 2645}}  precio de respaldo, SOLO si la celda de la lista no trae número
+               (si la lista ya trae el número, manda la lista y queda un aviso para quitar la excepción).
+  "cotizables": ["CLAVE"]  se publica sin precio y marcado "cotizable": true aunque la lista diga
+               "¡Próximamente!" o "Cotizable"; el vendedor captura el precio en la partida.
+
 Salidas (en --dir): catalogo.json (solo en "construir") y estado.json.
 Con --prueba se escriben catalogo-prueba.json y estado-prueba.json y no se tocan los reales.
 
@@ -124,7 +130,26 @@ def buscar_encabezado(filas):
     return None, None
 
 
-def procesar(texto):
+def cargar_excepciones(ruta_exc=None):
+    """Lee tools/excepciones.json (junto a este script). Formato:
+      {"precios": {"CLAVE": {"pp": 2645, "pd": 1000, "motivo": "..."}},   # solo se usan si la celda de la lista no trae número
+       "cotizables": ["CLAVE", ...]}                                       # se publican sin precio, como "cotizable"
+    Si el archivo no existe o está mal formado, no hay excepciones."""
+    ruta_exc = ruta_exc or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'excepciones.json')
+    d = leer_json(ruta_exc) if os.path.exists(ruta_exc) else None
+    precios, cotizables = {}, set()
+    if isinstance(d, dict):
+        for k, v in (d.get('precios') or {}).items():
+            if isinstance(v, dict):
+                ok = {f: float(v[f]) for f in ('pp', 'pd') if isinstance(v.get(f), (int, float)) and v[f] > 0}
+                if ok:
+                    precios[str(k).strip().upper()] = ok
+        cotizables = {str(c).strip().upper() for c in (d.get('cotizables') or []) if str(c).strip()}
+    return {'precios': precios, 'cotizables': cotizables}
+
+
+def procesar(texto, excep=None):
+    excep = excep or {'precios': {}, 'cotizables': set()}
     filas = leer_filas(texto)
     ih, col = buscar_encabezado(filas)
     if ih is None:
@@ -149,12 +174,32 @@ def procesar(texto):
         if not clave or norm(clave) == 'clave':
             continue
         filas_datos += 1
+        k = clave.upper()
+        # precios de respaldo (tools/excepciones.json): solo si la celda no trae un número
+        for campo, etiqueta in (('pp', 'público'), ('pd', 'distribuidor')):
+            resp = excep['precios'].get(k, {}).get(campo)
+            if not resp:
+                continue
+            if campo == 'pp' and not pp_v:
+                pp_v = resp
+                avisos.append('Precio %s de %s tomado de tools/excepciones.json: la celda de la lista no trae número' % (etiqueta, clave))
+            elif campo == 'pd' and not pd_v:
+                pd_v = resp
+                avisos.append('Precio %s de %s tomado de tools/excepciones.json: la celda de la lista no trae número' % (etiqueta, clave))
+            else:
+                avisos.append('Ya puedes quitar la excepción de precio %s de %s en tools/excepciones.json: la lista ya trae el número' % (etiqueta, clave))
+        cotizable = False
         if not pd_v and not pp_v:
-            txt_precio = norm(f[col['pd']]) + ' ' + norm(f[col['pp']])
-            if 'cotizable' in txt_precio or 'proximamente' in txt_precio:
-                continue  # "COTIZABLE" / "¡Próximamente!": todavía no tiene precio de lista
-            avisos.append('Sin precio: ' + clave)
-            continue
+            if k in excep['cotizables']:
+                cotizable = True  # se publica sin precio, marcado como cotizable
+            else:
+                txt_precio = norm(f[col['pd']]) + ' ' + norm(f[col['pp']])
+                if 'cotizable' in txt_precio or 'proximamente' in txt_precio:
+                    continue  # "COTIZABLE" / "¡Próximamente!": todavía no tiene precio de lista
+                avisos.append('Sin precio: ' + clave)
+                continue
+        elif k in excep['cotizables']:
+            avisos.append('Ya puedes quitar a %s de "cotizables" en tools/excepciones.json: la lista ya trae precio' % clave)
         item = {
             'clave': clave,
             'desc': re.sub(r'\s+', ' ', f[col['desc']]).strip() if 'desc' in col else '',
@@ -165,7 +210,8 @@ def procesar(texto):
         }
         if 'nota' in col and f[col['nota']].strip():
             item['nota'] = f[col['nota']].strip()
-        k = clave.upper()
+        if cotizable:
+            item['cotizable'] = True
         if k in vistos:
             ant = vistos[k]
             if abs(ant['pp'] - item['pp']) > 0.005 or abs(ant['pd'] - item['pd']) > 0.005:
@@ -176,6 +222,8 @@ def procesar(texto):
     for p in productos:
         if p['pd'] and p['pp'] and p['pd'] > p['pp'] * 1.0001:
             avisos.append('Precio distribuidor mayor que el público: ' + p['clave'])
+        if p.get('cotizable'):
+            continue
         if not p['pp']:
             avisos.append('Falta el precio público (revisa la celda): ' + p['clave'])
         elif not p['pd']:
@@ -295,7 +343,7 @@ def cmd_construir(a):
         filas_ok, filas_msg = verificar_filas(texto)
         if filas_ok is False:
             raise ValueError(filas_msg)
-        productos, avisos, chk = procesar(texto)
+        productos, avisos, chk = procesar(texto, cargar_excepciones(a.excepciones))
         ok_total, msg_total = verificar_total(chk, directo, (filas_ok, filas_msg))
         previo = leer_json(ruta(a.dir, 'catalogo.json', a.prueba))
         n_prev = len(previo.get('productos', [])) if previo else 0
@@ -366,6 +414,7 @@ def main():
     c.add_argument('--modificado', default='')
     c.add_argument('--fuente', default='Lista Precios Hergom Vet - 2026.xlsx')
     c.add_argument('--dir', default='.')
+    c.add_argument('--excepciones', default=None, help='ruta de excepciones.json (por omisión, el de tools/)')
     c.add_argument('--prueba', action='store_true')
     c.set_defaults(fn=cmd_construir)
     e = sub.add_parser('estado')

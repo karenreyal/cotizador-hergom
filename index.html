@@ -1060,10 +1060,13 @@ function normCatalogo(arr){
     const k = clave.toUpperCase();
     if (vistos[k]) return;
     const pp = num(p.pp), pd = num(p.pd);
-    if (!pp && !pd) return;
+    const cot = (p.cotizable === true || p.cot === true) && !pp && !pd;   // sin precio de lista, se cotiza caso por caso (normCatalogo se aplica dos veces: acepta ambos nombres)
+    if (!pp && !pd && !cot) return;
     vistos[k] = true;
-    out.push({clave, desc: String(p.desc || ''), marca: String(p.marca || ''), cat: String(p.cat || ''), pp, pd,
-              img: /^https?:\/\//i.test(String(p.img || '')) ? String(p.img) : ''});
+    const it = {clave, desc: String(p.desc || ''), marca: String(p.marca || ''), cat: String(p.cat || ''), pp, pd,
+              img: /^https?:\/\//i.test(String(p.img || '')) ? String(p.img) : ''};
+    if (cot) it.cot = true;
+    out.push(it);
   });
   return out;
 }
@@ -1317,6 +1320,7 @@ function searchProducts(q){
 }
 
 function precioResultado(p){
+  if (p.cot) return '<small>Cotizable</small>';
   if (state.tipoPrecio === 'PD') return p.pd > 0 ? money(p.pd) + ' <small>+ IVA</small>' : '<small>Sin precio PD</small>';
   return p.pp > 0 ? money(p.pp) : '<small>Sin precio PP</small>';
 }
@@ -1398,8 +1402,8 @@ function mostrarAviso(msg){
 }
 
 function agregarDeCatalogo(p){
-  addItem({marca:p.marca, clave:p.clave, desc:p.desc, pp:p.pp, pd:p.pd, cantidad:1});
-  mostrarAviso('✓ ' + p.clave + ' agregado a la cotización');
+  addItem({marca:p.marca, clave:p.clave, desc:p.desc, pp:p.pp, pd:p.pd, cantidad:1, cot:p.cot ? true : undefined});
+  mostrarAviso('✓ ' + p.clave + ' agregado a la cotización' + (p.cot ? ' · captura el precio cotizado' : ''));
 }
 
 // Arma la pregunta (texto + botones con clave y precio). Regresa null si ninguna opción está en el catálogo.
@@ -1533,7 +1537,7 @@ function renderItemsEditor(){
           <input type="number" step="1" min="1" data-field="cantidad" data-id="${it.id}" value="${it.cantidad||1}">
         </div>
       </div>
-      ${unitPrice(it) > 0 ? '' : '<div class="hint sync-error item-warn">⚠ Esta partida no tiene precio ' + (state.tipoPrecio === 'PD' ? 'distribuidor (PD)' : 'público (PP)') + ' en el catálogo. Captúralo aquí o cambia el tipo de precio.</div>'}
+      ${unitPrice(it) > 0 ? '' : it.cot ? '<div class="hint item-warn" data-warn-for="' + it.id + '">ℹ Producto cotizable: no tiene precio de lista. Escribe aquí el precio que vas a cotizar.</div>' : '<div class="hint sync-error item-warn" data-warn-for="' + it.id + '">⚠ Esta partida no tiene precio ' + (state.tipoPrecio === 'PD' ? 'distribuidor (PD)' : 'público (PP)') + ' en el catálogo. Captúralo aquí o cambia el tipo de precio.</div>'}
     </div>
   `).join('');
 
@@ -1548,6 +1552,10 @@ function renderItemsEditor(){
       if (field === 'pp' || field === 'pd') val = Number(val) || 0;
       else if (field === 'cantidad') val = Number(val);
       updateItem(el.dataset.id, field, val);
+      if (field === 'pp' || field === 'pd'){   // al capturar el precio, se quita el aviso de "sin precio" de esa partida
+        const w = box.querySelector('[data-warn-for="' + el.dataset.id + '"]');
+        if (w) w.style.display = val > 0 ? 'none' : '';
+      }
     });
   });
   if (lastAddedId){
