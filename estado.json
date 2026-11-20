@@ -1,8 +1,8 @@
 {
-  "revisado": "2026-11-19T13:21:54Z",
+  "revisado": "2026-11-20T13:21:15Z",
   "resultado": "error",
   "mensaje": "La lista maestra pesa 127.8 MB y el conector solo lee hasta 100 MB: hay que comprimir las imágenes del Excel",
-  "fuenteModificado": "2026-11-19T01:17:33.000Z",
+  "fuenteModificado": "2026-11-19T23:23:55.000Z",
   "fuente": "",
   "productos": 0,
   "cambios": {},
