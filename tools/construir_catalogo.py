@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 """
 Construye catalogo.json y estado.json para el Cotizador Hergom Vet
-a partir del texto de la lista maestra de precios.
+a partir del texto de la lista de precios (hoja "Veterinaria").
 
-El texto es la hoja "Veterinaria" de "Lista Precios Hergom Vet - 2026.xlsx" tal como la
-entrega el conector de Microsoft 365: filas separadas por saltos de línea y celdas
-separadas por tabuladores. Se acepta con o sin las líneas de encabezado del conector.
+Fuente actual: "LISTA VET.xlsx" (OneDrive de ventasvet), una lista ligera sin imágenes.
+El texto es la hoja tal como la entrega el conector de Microsoft 365: filas separadas por
+saltos de línea y celdas separadas por tabuladores. Se acepta con o sin las líneas de
+encabezado del conector ("## Sheet: ... — N rows × M columns").
 
 Uso:
-  construir_catalogo.py construir --tsv lista.tsv --modificado 2026-11-06T20:40:37Z \
-        --fuente "Lista Precios Hergom Vet - 2026.xlsx" [--dir .] [--prueba]
+  construir_catalogo.py construir --json resultado_guardado.json --modificado 2026-11-20T15:37:48Z \
+        --fuente "LISTA VET.xlsx" [--dir .] [--prueba]
+  construir_catalogo.py construir --tsv lista.txt --modificado ISO --fuente "LISTA VET.xlsx"
   construir_catalogo.py estado --resultado sin_cambios|error --mensaje "..." \
         [--modificado ISO] [--dir .] [--prueba]
+
+  --json  lee directamente el archivo donde el conector guardó una respuesta grande
+          (lista de {type, text}); no hay que copiar nada a mano.
+  --tsv   texto pegado a mano (solo si la respuesta llegó en línea).
 
 Salidas (en --dir): catalogo.json (solo en "construir") y estado.json.
 Con --prueba se escriben catalogo-prueba.json y estado-prueba.json y no se tocan los reales.
@@ -19,8 +25,8 @@ Con --prueba se escriben catalogo-prueba.json y estado-prueba.json y no se tocan
 Protecciones: la lista nueva NO se publica si
   - no se encuentra el encabezado (Clave / Precio Distribuidor / Precio Público),
   - trae menos de 100 productos o menos del 70% de los que ya estaban publicados,
-  - la suma de precios de las filas no coincide con la fila TOTAL de la propia hoja
-    (detecta cualquier dígito mal copiado).
+  - con --json: las filas recibidas no coinciden con las que declara el conector,
+  - con --tsv: no hay fila TOTAL que coincida con la suma de precios (detecta dígitos mal copiados).
 En esos casos se conserva el catalogo.json anterior y estado.json queda con resultado "error".
 """
 import argparse
