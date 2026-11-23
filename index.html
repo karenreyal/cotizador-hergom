@@ -102,7 +102,6 @@
 
   /* product search */
   .search-wrap{position:relative;}
-  #prodSearch{padding-right:34px;}
   .search-icon{position:absolute; right:10px; top:9px; font-size:14px; color:var(--muted); pointer-events:none;}
   .results{
     position:absolute; z-index:40; left:0; right:0; top:calc(100% + 4px);
@@ -360,6 +359,85 @@
   table.doc-table thead th small{display:block; font-weight:600; font-size:9px; text-transform:none; letter-spacing:0;}
   .pd-totals + .total-band{margin-top:6px;}
 
+
+  /* ---------- selector por categorías (ventana "Agregar producto") ---------- */
+  .btn-add-prod{margin-top:0;}
+  .picker{position:fixed; inset:0; z-index:90; background:rgba(22,14,70,.55); display:none; align-items:center; justify-content:center; padding:20px;}
+  .picker.open{display:flex;}
+  .picker-panel{background:#fff; width:min(700px,100%); height:min(88vh,860px); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(10,10,40,.4);}
+  .pk-head{display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); flex:0 0 auto;}
+  .pk-title{flex:1; min-width:0; font-family:'Poppins','Trebuchet MS',Calibri,Arial,sans-serif; font-size:16px; font-weight:700; color:var(--navy-dark); line-height:1.25;}
+  .pk-back, .pk-x{flex:0 0 auto; width:44px; height:44px; border:none; border-radius:10px; background:#eef4fb; color:var(--navy); font-size:26px; line-height:1; cursor:pointer; font-family:inherit;}
+  .pk-x{font-size:18px; background:#fff; border:1px solid var(--line);}
+  .pk-back:active, .pk-x:active{background:var(--celeste);}
+  .pk-search{padding:10px 12px; border-bottom:1px solid var(--line); flex:0 0 auto;}
+  .pk-search input{width:100%; border:1.5px solid var(--line); border-radius:10px; padding:12px 13px; font-size:16px; font-family:inherit; background:#fbfcfd; color:var(--ink); -webkit-appearance:none; appearance:none;}
+  .pk-search input:focus{outline:2px solid var(--blue); outline-offset:0; border-color:var(--blue);}
+  .pk-body{flex:1 1 auto; overflow-y:auto; padding:12px; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; background:#f6f8fb;}
+  .pk-foot{flex:0 0 auto; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); background:#fff;}
+  .pk-foot .btn-primary{margin-top:0; min-height:50px; font-size:15px;}
+  .pk-sub{font-size:12.5px; color:var(--muted); margin:0 2px 10px; line-height:1.4;}
+  .pk-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
+  @media (min-width:560px){ .pk-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
+  .pk-tile{min-height:80px; border:1.5px solid var(--line); border-radius:12px; background:#fff; padding:12px; text-align:left; font-family:inherit; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; gap:6px; color:var(--navy-dark);}
+  .pk-tile:hover{border-color:var(--azul-inst); background:#f3f9ff;}
+  .pk-tile:active{background:var(--celeste);}
+  .pk-tile .pk-tn{font-family:'Poppins','Trebuchet MS',Calibri,Arial,sans-serif; font-size:14.5px; font-weight:700; line-height:1.25;}
+  .pk-tile .pk-tc{font-size:12px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;}
+  .pk-tile .pk-chev{font-size:18px; color:var(--azul-inst); line-height:1;}
+  .pk-tile.pk-todo{background:#eef4fb; border-color:#b9d7f2;}
+  .pk-item{display:flex; gap:12px; align-items:center; width:100%; text-align:left; border:1.5px solid var(--line); border-radius:12px; background:#fff; padding:10px; margin:0 0 8px; cursor:pointer; min-height:76px; font-family:inherit; color:var(--ink);}
+  .pk-item:hover{border-color:var(--azul-inst);}
+  .pk-item:active{background:var(--celeste);}
+  .pk-item.pk-en-cot{border-color:#7cc59a; background:#f4fbf7;}
+  .pk-thumb{width:54px; height:54px; object-fit:contain; border-radius:8px; flex:0 0 auto; border:1px solid var(--line); background:#fff;}
+  .pk-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;}
+  .pk-clave{font-family:'Poppins','Trebuchet MS',Calibri,Arial,sans-serif; font-size:15px; font-weight:700; color:var(--navy-dark); word-break:break-word;}
+  .pk-marca{font-size:11px; color:var(--azul-inst); font-weight:700; text-transform:uppercase; letter-spacing:.3px;}
+  .pk-desc{font-size:12.5px; color:var(--muted); line-height:1.35; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;}
+  .pk-price{font-size:14px; font-weight:700; color:var(--navy);}
+  .pk-price small{font-weight:600; font-size:11px; opacity:.8;}
+  .pk-add{flex:0 0 auto; min-width:44px; height:44px; border-radius:22px; background:var(--navy); color:#fff; font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 12px;}
+  .pk-item.pk-en-cot .pk-add{background:#1a7f37; font-size:15px;}
+  .pk-vacio{padding:18px 12px; font-size:14px; color:var(--muted); text-align:center; line-height:1.5;}
+  .pk-vacio .link-btn{display:inline-block; margin-top:6px; font-size:14px;}
+  .pk-mas{font-size:12.5px; color:var(--muted); text-align:center; padding:6px 0 10px;}
+  .pk-body .preg-card{margin:0 0 12px;}
+  .pk-body .preg-opt{min-height:56px;}
+  html.pk-open, html.pk-open body{overflow:hidden;}
+  html.pk-open .toast-add{bottom:92px;}
+
+  /* ---------- teléfono: campos y botones del tamaño de un dedo ---------- */
+  @media (max-width:700px){
+    .picker{padding:0;}
+    .picker-panel{width:100%; height:100vh; height:100dvh; border-radius:0;}
+    .app{padding:10px 10px 70px;}
+    .app-header{padding:4px 2px 12px;}
+    .app-header h1{font-size:17px;}
+    .editor{padding:14px 13px 18px;}
+    label{font-size:13px;}
+    .hint{font-size:12px;}
+    input[type=text], input[type=number], input[type=date], select, textarea{font-size:16px; padding:11px 12px; border-radius:9px;}
+    .btn-primary{min-height:50px; font-size:15px;}
+    .btn-secondary{min-height:46px; font-size:14px;}
+    .link-btn{font-size:14px; padding:8px 0;}
+    .remove-btn{width:38px; height:38px; font-size:22px; border-radius:9px;}
+    .item-card{padding:11px;}
+    .item-card .item-name{font-size:14px;}
+    .item-card .item-clave{font-size:12px;}
+    .item-card textarea.item-desc-edit{font-size:14px; min-height:60px;}
+    .item-thumb{width:38px; height:38px;}
+    .item-bottom input{font-size:16px; padding:10px;}
+    .item-bottom .mini-field label{font-size:12px;}
+    .comp-add{padding:10px 13px; min-height:42px; font-size:13px;}
+    .comp-clave{font-size:13px;}
+    .comp-desc{font-size:12px;}
+    .tipo-opt .tipo-card{padding:12px 6px; font-size:13px;}
+    .saved-item button{padding:9px 12px; font-size:13px;}
+    .doc-outer{padding:12px 8px;}
+    .preview-toolbar{flex-wrap:wrap;}
+  }
+
   @media print{
     @page{ size: letter portrait; margin: 8mm; }
     *{
@@ -370,6 +448,8 @@
     body{background:#fff;}
     .app{max-width:none; padding:0; margin:0;}
     .app-header, .editor, .preview-toolbar{display:none !important;}
+    .picker{display:none !important;}
+    #preview{zoom:1 !important;}
     .layout{display:block;}
     .doc-outer{background:#fff; padding:0; border-radius:0;}
     .doc{width:auto; margin:0; padding:0; box-shadow:none;}
@@ -522,12 +602,9 @@
       </div>
 
       <div class="section-title">Productos</div>
-      <div class="field-group search-wrap">
-        <label for="prodSearch">Buscar en catálogo (clave, nombre o marca)</label>
-        <input type="text" id="prodSearch" autocomplete="off" placeholder="Ej. VETUS E3, transductor, Mindray...">
-        <span class="search-icon">⌕</span>
-        <div class="results" id="prodResults" style="display:none;"></div>
-        <div class="preg-card" id="pregCard" style="display:none;"></div>
+      <div class="field-group">
+        <button type="button" class="btn-primary btn-add-prod" id="btnAbrirPicker">＋ Agregar producto</button>
+        <div class="hint">Elige la categoría y toca el producto. También puedes buscar por clave o nombre.</div>
         <div class="manual-add">
           <button type="button" class="link-btn" id="btnManualAdd">+ Agregar producto libre (fuera de catálogo)</button>
         </div>
@@ -538,6 +615,7 @@
       </div>
 
       <div id="itemsList" class="items-list"></div>
+      <button type="button" class="btn-secondary" id="btnAbrirPicker2" style="display:none;">＋ Agregar otro producto</button>
       <div id="compBox" class="comp-box"></div>
       <div class="total-line">
         <span id="editorTotalLabel">Total</span>
@@ -724,6 +802,24 @@ Incluye instalación y capacitación</textarea>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VENTANA "AGREGAR PRODUCTO" (categorías + búsqueda) ============ -->
+<div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="pkTitle" aria-hidden="true">
+  <div class="picker-panel">
+    <div class="pk-head">
+      <button type="button" class="pk-back" id="pkBack" aria-label="Regresar">‹</button>
+      <div class="pk-title" id="pkTitle">¿Qué vas a cotizar?</div>
+      <button type="button" class="pk-x" id="pkX" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="pk-search">
+      <input type="search" id="pkSearch" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" placeholder="Buscar en todo el catálogo (clave o nombre)…">
+    </div>
+    <div class="pk-body" id="pkBody"></div>
+    <div class="pk-foot">
+      <button type="button" class="btn-primary" id="pkDone">Listo</button>
     </div>
   </div>
 </div>
@@ -1126,7 +1222,7 @@ function aplicarCatalogo(lista, fuente, fecha, motivo){
   PRODUCTS.forEach(p=>{ if (p.img) CAT_IMG[p.clave.toUpperCase()] = p.img; });
   catalogoMeta = {fuente, fecha: fecha || '', motivo: motivo || ''};
   mostrarEstadoCatalogo();
-  if (typeof searchInput !== 'undefined' && searchInput.value.trim()) renderResults(searchProducts(searchInput.value));
+  if (typeof refrescarPicker === 'function') refrescarPicker();
   if (typeof renderItemsEditor === 'function') renderItemsEditor();
 }
 
@@ -1299,24 +1395,136 @@ function esc(str){
 }
 function pct(n){ return `${Number(n)||0}%`; }
 
-// ---------- product search ----------
-const searchInput = document.getElementById('prodSearch');
-const resultsBox = document.getElementById('prodResults');
+// ---------- BUSCADOR POR CATEGORÍAS (ventana "Agregar producto") ----------
+// Primero se elige la categoría y luego el producto; también se puede buscar por clave o nombre en todo el catálogo.
+// Para agregar una categoría, mover un producto o corregir una asignación, solo se edita este bloque.
 
-function searchProducts(q){
-  q = q.trim().toUpperCase();
-  if (!q) return [];
-  const terms = q.split(/\s+/);
-  const hits = PRODUCTS.filter(p=>{
-    const hay = `${p.clave} ${p.desc} ${p.marca} ${p.cat||''}`.toUpperCase();
-    return terms.every(t=> hay.includes(t));
-  }).map((p,i)=>{
-    const k = p.clave.toUpperCase();
-    // la clave exacta sale primero, luego las que empiezan igual, luego las que la contienen
-    return {p, i, s: k === q ? 0 : k.startsWith(q) ? 1 : k.includes(q) ? 2 : 3};
+// CATEGORIAS: lo que se ve al inicio. "subs" son las subcategorías (si la categoría las tiene).
+const CATEGORIAS = [
+  {id: 'resonancia',      n: 'Resonancia magnética'},
+  {id: 'tomografia',      n: 'Tomografía'},
+  {id: 'rayosx',          n: 'Rayos X'},
+  {id: 'ultrasonidos',    n: 'Ultrasonidos', subs: [{id: 'portatiles', n: 'Portátiles'}, {id: 'gabinete', n: 'De gabinete'}]},
+  {id: 'anestesia',       n: 'Máquinas de anestesia'},
+  {id: 'monitores',       n: 'Monitores'},
+  {id: 'energia',         n: 'Plataformas de energía'},
+  {id: 'incubadoras',     n: 'Incubadoras'},
+  {id: 'oximetros',       n: 'Oxímetros'},
+  {id: 'bombas',          n: 'Bombas', subs: [{id: 'infusion', n: 'Infusión (volumétricas)'}, {id: 'perfusion', n: 'Perfusión (jeringa)'}]},
+  {id: 'desfibriladores', n: 'Desfibriladores'},
+  {id: 'ventiladores',    n: 'Ventiladores'},
+  {id: 'lamparas',        n: 'Lámparas'},
+  {id: 'endoscopios',     n: 'Endoscopios'},
+  {id: 'laboratorio',     n: 'Laboratorio', subs: [{id: 'quimica', n: 'Química sanguínea'}, {id: 'hematologia', n: 'Hematología'}, {id: 'inmuno', n: 'Inmunoanálisis'}]},
+  {id: 'basculas',        n: 'Básculas'},
+  {id: 'ecg',             n: 'Electrocardiógrafos'}
+];
+// CAT_HOJA: a qué categoría va un producto según la "categoría general" que trae la lista de precios (sin acentos ni mayúsculas).
+// Así un producto nuevo de la lista cae solo en su categoría; si su categoría no está aquí, aparece en "Otros productos".
+const CAT_HOJA = {
+  'RESONANCIA MAGNETICA': 'resonancia',
+  'TOMOGRAFIA COMPUTARIZADA': 'tomografia',
+  'RAYOS X': 'rayosx',
+  'ULTRASONIDOS PORTATILES': 'ultrasonidos/portatiles',
+  'ULTRASONIDOS DE GABINETE': 'ultrasonidos/gabinete',
+  'ANESTESIA': 'anestesia',
+  'MONITOREO': 'monitores',
+  'ENERGIAS': 'energia',
+  'INCUBADORAS': 'incubadoras',
+  'OXIMETRIA': 'oximetros',
+  'OXIMETROS DE PULSO': 'oximetros',
+  'BOMBAS DE INFUSION': 'bombas/infusion',
+  'BOMBAS DE PERFUSION': 'bombas/perfusion',
+  'DESFIBRILADOR': 'desfibriladores',
+  'DESFIBRILADORES': 'desfibriladores',
+  'PMLS': 'ventiladores',
+  'VENTILACION MECANICA': 'ventiladores',
+  'LAMPARAS QUIRURGICAS': 'lamparas',
+  'ENDOSCOPIA': 'endoscopios',
+  'HEMATOLOGIA': 'laboratorio/hematologia',
+  'QUIMICA': 'laboratorio/quimica',
+  'INMUNOENSAYO': 'laboratorio/inmuno',
+  'ELECTROCARDIOGRAFO': 'ecg',
+  'ELECTROCARDIOGRAFOS': 'ecg',
+  'BASCULAS': 'basculas'
+};
+// CATEGORIAS_PRODUCTO: casos que la categoría de la lista no resuelve (accesorios, transductores, productos en dos categorías).
+// Clave -> categoría o "categoría/subcategoría". Un producto que aparece aquí usa SOLO estas categorías (puede estar en varias).
+const CATEGORIAS_PRODUCTO = {
+  'ultrasonidos/portatiles': [
+    // accesorios de los portátiles
+    '009-003702-00', 'iCOVERKIT', 'DUALVETUSE7', '9101-20-58104', 'ECGVETUSE7', 'UBANKV', 'VETUSMLT', '048-00160A-00', '048-004129-00',
+    'MT1V', 'MT2', 'MT3-VET', 'ECGZ60V', 'UMT-170',
+    // transductores de los portátiles (E7, E5, E3, Z60, DP50 y DP10)
+    'C11-3S', 'C5-1SV', 'L13-3NSV', 'L16-4HSV', 'P10-4SV', 'P8-2S', 'P4-2SV',
+    'C6-1MV', 'HS14-5LMV', 'L13-3MV', 'L14-3MV', 'MC11-3MV', 'P10-4MV', 'P4-2MV', 'P8-2MV',
+    '6C2MV', 'L12-3MV', 'P10-2MV', '6LE5VMV', 'C5-2M',
+    'P8-2PV', 'L14-6PV', '7L4PV', '6C2PV', '35C20EA', '65C15EAV', '75L38EAV', '75L50EAV'
+  ],
+  'ultrasonidos/gabinete': [
+    '115-00706A-00',
+    'C11-3S', 'L16-4HSV', 'P10-4SV', 'P8-2S', '6C2MV', 'L12-3MV', 'P10-2MV', 'P8-2MV', 'C5-2M',
+    'L13-3', '6C2V', '6C2', 'C11-3V50', 'L13-3V', 'C5-1V50', 'P8-2V50', 'P8-2V', 'L12-4S', 'L13-3NS', 'C13-3SV'
+  ],
+  'anestesia':   ['VETA3XBAIN', '115-00967A-00', '115-00966A-00', 'CARRITOBV', '6800-30-50876', 'VETA4AV'],
+  'monitores':   ['9101-20-58104', '6800-30-50876', 'VETA4AV'],
+  'bombas/infusion':  ['MICROGOTERO', 'NORMOGOTERO', 'BENEFUSION-EDS'],
+  'bombas/perfusion': ['BENEFUSION-EDS'],
+  'laboratorio': ['UA-60V', 'UA-60VT'],
+  'laboratorio/quimica': ['VETXPERT-CUBE'],
+  'laboratorio/inmuno':  ['VETXPERT-CUBE']
+};
+
+const _sinAcentos = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+const CAT_OTROS = {id: 'otros', n: 'Otros productos'};
+const RUTAS_VALIDAS = new Set();
+CATEGORIAS.forEach(c => { RUTAS_VALIDAS.add(c.id); (c.subs || []).forEach(s => RUTAS_VALIDAS.add(c.id + '/' + s.id)); });
+const RUTAS_PRODUCTO = {};   // clave -> categorías, armado a partir de CATEGORIAS_PRODUCTO
+Object.keys(CATEGORIAS_PRODUCTO).forEach(ruta => {
+  CATEGORIAS_PRODUCTO[ruta].forEach(c => { const k = claveNorm(c); (RUTAS_PRODUCTO[k] = RUTAS_PRODUCTO[k] || []).push(ruta); });
+});
+const _rutasCache = new WeakMap();
+function rutasDe(p){
+  if (_rutasCache.has(p)) return _rutasCache.get(p);
+  let rs = RUTAS_PRODUCTO[claveNorm(p.clave)];
+  if (!rs){ const h = CAT_HOJA[_sinAcentos(p.cat)]; rs = h ? [h] : []; }
+  rs = rs.filter(r => RUTAS_VALIDAS.has(r));
+  _rutasCache.set(p, rs);
+  return rs;
+}
+function nombreRuta(r){
+  const [c, s] = r.split('/');
+  const cat = CATEGORIAS.find(x => x.id === c);
+  if (!cat) return '';
+  const sub = s && cat.subs ? cat.subs.find(x => x.id === s) : null;
+  return sub ? cat.n + ' ' + sub.n : cat.n;
+}
+// Productos de una categoría ("rayosx"), de una subcategoría ("ultrasonidos/portatiles") o los que no cayeron en ninguna ("otros").
+function productosDeRuta(ruta){
+  return PRODUCTS.filter(p => {
+    const rs = rutasDe(p);
+    if (ruta === 'otros') return rs.length === 0;
+    return rs.some(r => r === ruta || r.indexOf(ruta + '/') === 0);
   });
-  hits.sort((a,b)=> a.s - b.s || a.i - b.i);
-  return hits.slice(0, 10).map(x=>x.p);
+}
+
+// ---------- búsqueda ----------
+function buscarEnCatalogo(q, lista){
+  const qn = _sinAcentos(q);
+  if (!qn) return lista.slice();
+  const terms = qn.split(/\s+/).filter(Boolean);
+  const qc = busquedaNorm(q);
+  const hits = [];
+  lista.forEach((p, i)=>{
+    const hay = _sinAcentos(p.clave + ' ' + p.desc + ' ' + p.marca + ' ' + (p.cat || '') + ' ' + rutasDe(p).map(nombreRuta).join(' '));
+    const ok = terms.every(t => hay.indexOf(t) >= 0) || (qc.length >= 3 && busquedaNorm(p.clave).indexOf(qc) >= 0);
+    if (!ok) return;
+    const k = _sinAcentos(p.clave);
+    // la clave exacta sale primero, luego las que empiezan igual, luego las que la contienen
+    hits.push({p, i, s: k === qn ? 0 : k.indexOf(qn) === 0 ? 1 : k.indexOf(qn) >= 0 ? 2 : 3});
+  });
+  hits.sort((a, b) => a.s - b.s || a.i - b.i);
+  return hits.map(h => h.p);
 }
 
 function precioResultado(p){
@@ -1325,62 +1533,238 @@ function precioResultado(p){
   return p.pp > 0 ? money(p.pp) : '<small>Sin precio PP</small>';
 }
 
-function renderResults(list){
-  if (!list.length){
-    resultsBox.innerHTML = `<div class="no-results">Sin resultados en el catálogo. Usa "Agregar producto libre".</div>`;
-    resultsBox.style.display = 'block';
-    return;
-  }
-  const pq = preguntaPorBusqueda(searchInput.value);
-  const arm = pq ? armarPregunta(pq) : null;
-  const pregHtml = arm ? `<div class="preg-card preg-inline" id="pregInline">${arm.html}</div>` : '';
-  resultsBox.innerHTML = pregHtml + list.map((p,i)=>{
-    return `
-    <div class="result-item" data-idx="${i}">
-      <img class="result-thumb" src="${imgFor(p.clave)}" alt="">
-      <div class="rbody">
-        <div class="rmeta">
-          <div class="rtitle">${esc(p.clave)} · ${esc(p.marca)}</div>
-          <div class="rprice">${precioResultado(p)}</div>
-        </div>
-        <div class="rdesc">${esc(p.desc)}</div>
-      </div>
-    </div>
-  `;
-  }).join('');
-  resultsBox.style.display = 'block';
-  if (arm) enlazarPregunta(resultsBox.querySelector('#pregInline'), arm.ops);
-  resultsBox.querySelectorAll('.result-item').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      const p = list[Number(el.dataset.idx)];
-      // ya vieron la pregunta arriba de los resultados, o escribieron la clave exacta: se agrega lo que eligieron
-      const yaSeSabe = !!preguntaPorBusqueda(searchInput.value) || busquedaNorm(searchInput.value) === busquedaNorm(p.clave);
-      searchInput.value = '';
-      resultsBox.style.display = 'none';
-      const preg = yaSeSabe ? null : preguntaPorClave(p.clave);
-      if (preg && mostrarPregunta(preg)) return;
-      agregarDeCatalogo(p);
-      searchInput.focus();
-    });
-  });
-}
-
-searchInput.addEventListener('input', ()=>{
-  document.getElementById('pregCard').style.display = 'none';
-  const list = searchProducts(searchInput.value);
-  if (searchInput.value.trim()) renderResults(list);
-  else resultsBox.style.display = 'none';
-});
-searchInput.addEventListener('focus', ()=>{
-  if (searchInput.value.trim()) renderResults(searchProducts(searchInput.value));
-});
-document.addEventListener('click', (e)=>{
-  if (!e.target.closest('.search-wrap')) resultsBox.style.display = 'none';
-});
-
 document.getElementById('btnManualAdd').addEventListener('click', ()=>{
   addItem({marca:'', clave:'', desc:'Descripción del producto', pp:0, pd:0, cantidad:1});
 });
+
+// ---------- ventana "Agregar producto" ----------
+const PK_MAX_GLOBAL = 60;   // resultados que se muestran al buscar en todo el catálogo
+const pk = {abierto: false, cat: null, sub: null, todo: false, q: '', preg: null, lista: [], ops: []};
+let pkHist = false, pkTimer = null;
+const $pk = id => document.getElementById(id);
+const pkEsToque = () => !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+
+function pkCategoria(){
+  if (!pk.cat) return null;
+  return pk.cat === 'otros' ? CAT_OTROS : (CATEGORIAS.find(c => c.id === pk.cat) || null);
+}
+function plural(n){ return n + ' producto' + (n === 1 ? '' : 's'); }
+
+function pintarPregunta(preg, conCancelar){
+  const arm = armarPregunta(preg);
+  if (!arm) return '';
+  pk.ops = arm.ops;
+  return '<div class="preg-card" id="pkPreg">' + arm.html +
+    (conCancelar ? '<div class="manual-add"><button type="button" class="link-btn" data-pk-cancel="1">Cancelar</button></div>' : '') + '</div>';
+}
+
+function filaProducto(p){
+  return `
+    <button type="button" class="pk-item" data-clave="${esc(p.clave)}">
+      <img class="pk-thumb" src="${imgFor(p.clave)}" alt="" loading="lazy" decoding="async">
+      <span class="pk-main">
+        <span class="pk-clave">${esc(p.clave)}</span>
+        ${p.marca ? `<span class="pk-marca">${esc(p.marca)}</span>` : ''}
+        <span class="pk-desc">${esc(p.desc)}</span>
+        <span class="pk-price">${precioResultado(p)}</span>
+      </span>
+      <span class="pk-add" aria-hidden="true">＋</span>
+    </button>`;
+}
+
+function renderPicker(){
+  const cat = pkCategoria();
+  const sub = (cat && pk.sub && cat.subs) ? cat.subs.find(s => s.id === pk.sub) : null;
+  const alcance = sub ? sub.n : (cat ? cat.n : '');
+  $pk('pkTitle').textContent = !cat ? (pk.q ? 'Resultados en todo el catálogo' : '¿Qué vas a cotizar?') : (sub ? cat.n + ' › ' + sub.n : cat.n);
+  $pk('pkBack').style.display = (cat || pk.q) ? '' : 'none';
+  const inp = $pk('pkSearch');
+  inp.placeholder = cat ? 'Buscar en ' + alcance + '…' : 'Buscar en todo el catálogo (clave o nombre)…';
+  if (inp.value !== pk.q) inp.value = pk.q;
+
+  let html = '';
+  if (pk.preg) html += pintarPregunta(pk.preg, true);
+  else { const pq = pk.q ? preguntaPorBusqueda(pk.q) : null; if (pq) html += pintarPregunta(pq, false); }
+
+  const verTiles = !pk.q && (!cat || (cat.subs && !pk.sub && !pk.todo));
+  if (verTiles){
+    pk.lista = [];
+    if (!cat){
+      html += '<div class="pk-sub">Elige lo que vas a cotizar, o escribe arriba la clave o el nombre.</div><div class="pk-grid">';
+      const todas = CATEGORIAS.concat(productosDeRuta('otros').length ? [CAT_OTROS] : []);
+      html += todas.map(c => {
+        const n = productosDeRuta(c.id).length;
+        return `<button type="button" class="pk-tile" data-cat="${c.id}"><span class="pk-tn">${esc(c.n)}</span><span class="pk-tc"><span>${plural(n)}</span>${c.subs ? '<span class="pk-chev">›</span>' : ''}</span></button>`;
+      }).join('');
+      html += '</div>';
+    } else {
+      html += '<div class="pk-sub">¿Cuál de estas?</div><div class="pk-grid">';
+      html += `<button type="button" class="pk-tile pk-todo" data-todo="1"><span class="pk-tn">Todo en ${esc(cat.n)}</span><span class="pk-tc"><span>${plural(productosDeRuta(cat.id).length)}</span></span></button>`;
+      html += cat.subs.map(s => `<button type="button" class="pk-tile" data-sub="${s.id}"><span class="pk-tn">${esc(s.n)}</span><span class="pk-tc"><span>${plural(productosDeRuta(cat.id + '/' + s.id).length)}</span></span></button>`).join('');
+      html += '</div>';
+    }
+  } else {
+    const base = cat ? productosDeRuta(sub ? cat.id + '/' + sub.id : cat.id) : PRODUCTS;
+    const todos = pk.q ? buscarEnCatalogo(pk.q, base) : base.slice();
+    const lista = cat ? todos : todos.slice(0, PK_MAX_GLOBAL);
+    pk.lista = lista;
+    if (!lista.length){
+      html += cat
+        ? `<div class="pk-vacio">Sin resultados en ${esc(alcance)}.<br><button type="button" class="link-btn" data-pk-global="1">Buscar "${esc(pk.q)}" en todo el catálogo</button></div>`
+        : `<div class="pk-vacio">No encontré nada con "${esc(pk.q)}". Revisa la clave o elige una categoría.<br><button type="button" class="link-btn" data-pk-libre="1">+ Agregar producto libre (fuera de catálogo)</button></div>`;
+    } else {
+      if (!cat && todos.length > lista.length) html += `<div class="pk-mas">Mostrando ${lista.length} de ${todos.length}. Escribe más para afinar.</div>`;
+      html += lista.map(filaProducto).join('');
+    }
+  }
+  const body = $pk('pkBody');
+  body.innerHTML = html;
+  actualizarInsignias();
+}
+
+// Marca en cada producto cuántas piezas ya van en la cotización y actualiza el botón de abajo.
+function actualizarInsignias(){
+  const cuenta = {};
+  state.items.forEach(it => { const k = claveNorm(it.clave); if (k) cuenta[k] = (cuenta[k] || 0) + (Number(it.cantidad) || 1); });
+  document.querySelectorAll('#pkBody .pk-item').forEach(el=>{
+    const n = cuenta[claveNorm(el.dataset.clave)] || 0;
+    el.classList.toggle('pk-en-cot', n > 0);
+    const add = el.querySelector('.pk-add');
+    if (add) add.textContent = n > 0 ? '✓ ' + n : '＋';
+  });
+  const n = state.items.length;
+  $pk('pkDone').textContent = n ? 'Listo · ver mi cotización (' + n + ')' : 'Cerrar';
+}
+function refrescarPicker(){ if (pk.abierto) renderPicker(); }
+
+// Con una pregunta de versión (por ejemplo VETUS E7 básica o avanzada): se contesta antes de agregar.
+function elegirProducto(p){
+  const yaSeSabe = !!preguntaPorBusqueda(pk.q) || busquedaNorm(pk.q) === busquedaNorm(p.clave);
+  const preg = yaSeSabe ? null : preguntaPorClave(p.clave);
+  if (preg && armarPregunta(preg)){
+    pk.preg = preg;
+    renderPicker();
+    $pk('pkBody').scrollTop = 0;
+    return;
+  }
+  if (pk.preg){ pk.preg = null; const c = document.getElementById('pkPreg'); if (c) c.remove(); }
+  agregarDeCatalogo(p);
+  actualizarInsignias();
+}
+
+function subirNivel(){
+  if (pk.preg) pk.preg = null;
+  else if (pk.q){ pk.q = ''; $pk('pkSearch').value = ''; }
+  else if (pk.sub || pk.todo){ pk.sub = null; pk.todo = false; }
+  else if (pk.cat) pk.cat = null;
+  renderPicker();
+  $pk('pkBody').scrollTop = 0;
+}
+
+function abrirPicker(){
+  if (pk.abierto) return;
+  Object.assign(pk, {abierto: true, cat: null, sub: null, todo: false, q: '', preg: null});
+  $pk('picker').classList.add('open');
+  $pk('picker').setAttribute('aria-hidden', 'false');
+  document.documentElement.classList.add('pk-open');
+  try{ history.pushState({picker: 1}, ''); pkHist = true; }catch(e){ pkHist = false; }   // así el botón "atrás" del teléfono cierra la ventana y no la página
+  renderPicker();
+  $pk('pkBody').scrollTop = 0;
+  if (!pkEsToque()) $pk('pkSearch').focus();   // en el teléfono no se abre el teclado: primero se elige la categoría
+}
+function cerrarPicker(desdeAtras){
+  if (!pk.abierto) return;
+  pk.abierto = false;
+  clearTimeout(pkTimer);
+  $pk('picker').classList.remove('open');
+  $pk('picker').setAttribute('aria-hidden', 'true');
+  document.documentElement.classList.remove('pk-open');
+  if (!desdeAtras && pkHist){ try{ history.back(); }catch(e){} }
+  pkHist = false;
+}
+function cerrarYVerCotizacion(){
+  const n = state.items.length;
+  cerrarPicker();
+  if (n){ setTimeout(()=>{ const l = document.getElementById('itemsList'); if (l) l.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 60); }
+}
+
+window.addEventListener('popstate', ()=>{
+  if (!pk.abierto) return;
+  if (pk.preg || pk.sub || pk.todo || pk.cat || pk.q){ subirNivel(); try{ history.pushState({picker: 1}, ''); }catch(e){} }   // "atrás" sube un nivel
+  else { pkHist = false; cerrarPicker(true); }
+});
+document.addEventListener('keydown', (e)=>{
+  if (!pk.abierto) return;
+  if (e.key === 'Escape'){ e.preventDefault(); if (pk.preg || pk.sub || pk.todo || pk.cat || pk.q) subirNivel(); else cerrarPicker(); }
+});
+
+$pk('btnAbrirPicker').addEventListener('click', abrirPicker);
+$pk('btnAbrirPicker2').addEventListener('click', abrirPicker);
+$pk('pkBack').addEventListener('click', subirNivel);
+$pk('pkX').addEventListener('click', ()=> cerrarPicker());
+$pk('pkDone').addEventListener('click', cerrarYVerCotizacion);
+$pk('picker').addEventListener('click', (e)=>{ if (e.target === $pk('picker')) cerrarPicker(); });
+
+$pk('pkSearch').addEventListener('input', ()=>{
+  clearTimeout(pkTimer);
+  pkTimer = setTimeout(()=>{
+    pk.q = $pk('pkSearch').value.trim();
+    pk.preg = null;
+    renderPicker();
+    $pk('pkBody').scrollTop = 0;
+  }, 90);
+});
+$pk('pkSearch').addEventListener('keydown', (e)=>{
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  clearTimeout(pkTimer);
+  pk.q = $pk('pkSearch').value.trim();
+  pk.preg = null;
+  renderPicker();
+  if (pkEsToque()){ $pk('pkSearch').blur(); return; }   // en el teléfono "Buscar" solo cierra el teclado
+  if (pk.q && pk.lista.length) elegirProducto(pk.lista[0]);   // en la computadora Enter agrega el primer resultado
+});
+
+// Un solo manejador para todo lo que se toca dentro de la ventana
+$pk('pkBody').addEventListener('click', (e)=>{
+  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-global],[data-pk-libre]');
+  if (!t) return;
+  if (t.dataset.op !== undefined){
+    const o = pk.ops[Number(t.dataset.op)];
+    if (!o) return;
+    pk.preg = null; pk.q = ''; $pk('pkSearch').value = '';
+    agregarDeCatalogo(o.p);
+    renderPicker();
+    return;
+  }
+  if (t.dataset.pkCancel){ pk.preg = null; renderPicker(); return; }
+  if (t.dataset.pkGlobal){ pk.cat = null; pk.sub = null; pk.todo = false; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.pkLibre){
+    addItem({marca:'', clave:'', desc:'Descripción del producto', pp:0, pd:0, cantidad:1});
+    cerrarYVerCotizacion();
+    return;
+  }
+  if (t.dataset.cat){ pk.cat = t.dataset.cat; pk.sub = null; pk.todo = false; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.sub){ pk.sub = t.dataset.sub; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.todo){ pk.todo = true; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.classList.contains('pk-item')){
+    const p = buscarPrecios(t.dataset.clave);
+    if (p) elegirProducto(p);
+  }
+});
+
+// ---------- vista previa del PDF ajustada al ancho de la pantalla (teléfono) ----------
+function ajustarVistaPrevia(){
+  const outer = document.querySelector('.doc-outer'), doc = document.getElementById('preview');
+  if (!outer || !doc) return;
+  const cs = getComputedStyle(outer);
+  const disp = outer.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  const z = disp > 0 && disp < 800 ? Math.max(0.3, disp / 800) : 1;
+  doc.style.zoom = z < 1 ? String(z) : '';
+}
+window.addEventListener('resize', ajustarVistaPrevia);
+window.addEventListener('load', ajustarVistaPrevia);
+ajustarVistaPrevia();
 
 // ---------- items ----------
 function addItem(item){
@@ -1402,6 +1786,16 @@ function mostrarAviso(msg){
 }
 
 function agregarDeCatalogo(p){
+  // si el producto ya va en la cotización, se suma una pieza en vez de duplicar la partida
+  const ya = state.items.find(it => claveNorm(it.clave) === claveNorm(p.clave));
+  if (ya){
+    ya.cantidad = (Number(ya.cantidad) || 1) + 1;
+    lastAddedId = ya.id;
+    renderItemsEditor();
+    render();
+    mostrarAviso('✓ ' + p.clave + ' · cantidad: ' + ya.cantidad);
+    return;
+  }
   addItem({marca:p.marca, clave:p.clave, desc:p.desc, pp:p.pp, pd:p.pd, cantidad:1, cot:p.cot ? true : undefined});
   mostrarAviso('✓ ' + p.clave + ' agregado a la cotización' + (p.cot ? ' · captura el precio cotizado' : ''));
 }
@@ -1421,31 +1815,6 @@ function armarPregunta(preg){
     </div>`;
   return {ops, html};
 }
-function enlazarPregunta(cont, ops){
-  cont.querySelectorAll('[data-op]').forEach(b=>{
-    b.addEventListener('click', (ev)=>{
-      ev.stopPropagation();
-      document.getElementById('pregCard').style.display = 'none';
-      resultsBox.style.display = 'none';
-      searchInput.value = '';
-      agregarDeCatalogo(ops[Number(b.dataset.op)].p);
-      searchInput.focus();
-    });
-  });
-}
-// Tarjeta debajo del buscador: se usa cuando eligen un equipo de la familia sin haber contestado la pregunta.
-function mostrarPregunta(preg){
-  const card = document.getElementById('pregCard');
-  const q = armarPregunta(preg);
-  if (!card || !q) return false;
-  card.innerHTML = q.html + '<div class="manual-add"><button type="button" class="link-btn" data-cancel="1">Cancelar</button></div>';
-  card.style.display = 'block';
-  enlazarPregunta(card, q.ops);
-  card.querySelector('[data-cancel]').addEventListener('click', ()=>{ card.style.display = 'none'; });
-  card.scrollIntoView({block:'nearest'});
-  return true;
-}
-
 // Panel "Complementos sugeridos": uno por cada producto de la cotización que tenga sugerencias.
 function renderComplementos(){
   const box = document.getElementById('compBox');
@@ -1503,8 +1872,10 @@ function updateItem(id, field, value){
 function renderItemsEditor(){
   const box = document.getElementById('itemsList');
   renderComplementos();
+  const otro = document.getElementById('btnAbrirPicker2');
+  if (otro) otro.style.display = state.items.length ? '' : 'none';
   if (!state.items.length){
-    box.innerHTML = `<div class="empty-items">Aún no agregas productos. Búscalos arriba o crea uno libre.</div>`;
+    box.innerHTML = `<div class="empty-items">Aún no agregas productos. Toca "Agregar producto" para elegirlos por categoría, o crea uno libre.</div>`;
     return;
   }
   box.innerHTML = state.items.map(it=>`
@@ -1774,7 +2145,7 @@ document.querySelectorAll('input[name="tipoPrecio"]').forEach(r=>{
   r.addEventListener('change', ()=>{
     render();
     renderItemsEditor();
-    resultsBox.style.display = 'none';
+    refrescarPicker();
   });
 });
 
