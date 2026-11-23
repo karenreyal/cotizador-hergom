@@ -431,6 +431,19 @@
   .pk-tile.pk-fam .pk-tn{font-size:16px;}
   .pk-extra{text-align:center; margin-top:14px;}
   .pk-extra .link-btn{font-size:14px;}
+  .pk-comp .comp-ok{background:#e9f7ef; border:1px solid #7cc59a; color:#14612b; border-radius:10px; padding:11px 12px; font-weight:700; font-size:14px; margin-bottom:12px; line-height:1.3;}
+  .pk-comp .comp-h{font-family:'Poppins','Trebuchet MS',Calibri,Arial,sans-serif; font-size:14.5px; font-weight:700; color:var(--navy-dark); margin:16px 2px 7px; display:flex; align-items:center; gap:7px;}
+  .pk-comp .comp-card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:0 11px; overflow:hidden;}
+  .pk-comp .comp-card .comp-row:first-child{border-top:none;}
+  .pk-comp .comp-row{padding:11px 0; border-top-color:var(--line);}
+  .pk-comp .comp-thumb{width:48px; height:48px;}
+  .pk-comp .comp-clave{font-size:14px;}
+  .pk-comp .comp-desc{font-size:12.5px; -webkit-line-clamp:3;}
+  .pk-comp .comp-price{font-size:13.5px;}
+  .pk-comp .comp-add{min-height:42px; padding:8px 12px; font-size:13px;}
+  .pk-comp .comp-kit{padding:8px 11px 4px; margin:0 0 4px;}
+  .pk-comp .comp-kit-lbl{font-size:12px;}
+  .pk-comp .pk-seguir{margin-top:18px; width:100%; min-height:48px;}
   html.pk-open, html.pk-open body{overflow:hidden;}
   html.pk-open .toast-add{bottom:92px;}
 
@@ -1652,7 +1665,7 @@ document.getElementById('btnManualAdd').addEventListener('click', ()=>{
 
 // ---------- ventana "Agregar producto" ----------
 const PK_MAX_GLOBAL = 60;   // resultados que se muestran al buscar en todo el catálogo
-const pk = {abierto: false, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos', sinFam: false, lista: [], ops: []};
+const pk = {abierto: false, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos', sinFam: false, comp: null, lista: [], ops: []};
 let pkHist = false, pkTimer = null;
 const $pk = id => document.getElementById(id);
 const pkEsToque = () => !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
@@ -1662,7 +1675,7 @@ function pkCategoria(){
   return pk.cat === 'otros' ? CAT_OTROS : (CATEGORIAS.find(c => c.id === pk.cat) || null);
 }
 function plural(n){ return n + ' producto' + (n === 1 ? '' : 's'); }
-const pkTieneNivel = () => !!(pk.aviso || pk.preg || pk.sinFam || pk.sub || pk.todo || pk.cat || pk.q);
+const pkTieneNivel = () => !!(pk.comp || pk.aviso || pk.preg || pk.sinFam || pk.sub || pk.todo || pk.cat || pk.q);
 
 function pintarPregunta(preg, conCancelar){
   const arm = armarPregunta(preg);
@@ -1670,6 +1683,32 @@ function pintarPregunta(preg, conCancelar){
   pk.ops = arm.ops;
   return '<div class="preg-card" id="pkPreg">' + arm.html +
     (conCancelar ? '<div class="manual-add"><button type="button" class="link-btn" data-pk-cancel="1">Cancelar</button></div>' : '') + '</div>';
+}
+
+// Pantalla que sale justo después de agregar un equipo: kit sugerido y, abajo, transductores y accesorios con su botón "+ Agregar".
+function pintarComp(){
+  const g = grupoComplementos(pk.comp);
+  const fila = filas => '<div class="comp-card">' + filas.map(p => filaComplemento(p)).join('') + '</div>';
+  let h = '<div class="pk-comp"><div class="comp-ok">✓ ' + esc(pk.comp) + ' agregado a la cotización</div>';
+  if (g && g.aviso) h += '<div class="comp-aviso">⚠️ ' + esc(g.aviso) + '</div>';
+  if (g && g.kit) h += '<div class="comp-kit"><div class="comp-kit-lbl">Kit sugerido</div>' + filaComplemento(g.kit, botonKit(g)) + '</div>';
+  if (g) g.secciones.forEach(s => { h += '<div class="comp-h">' + s.titulo + ' <span class="comp-n">' + s.filas.length + '</span></div>' + fila(s.filas); });
+  if (g && g.planas.length) h += '<div class="comp-h">Complementos sugeridos <span class="comp-n">' + g.planas.length + '</span></div>' + fila(g.planas);
+  if (!g || !(g.n || g.kit)) h += '<div class="pk-vacio">Ya agregaste todo lo sugerido para este equipo.</div>';
+  return h + '<button type="button" class="btn-secondary pk-seguir" data-pk-seguir="1">Listo · seguir agregando productos</button></div>';
+}
+// Agrega desde la ventana; si es un equipo nuevo en la cotización y tiene sugerencias, se muestra la pantalla de complementos.
+function agregarEnPicker(p){
+  const yaVa = state.items.some(it => claveNorm(it.clave) === claveNorm(p.clave));
+  agregarDeCatalogo(p);
+  const g = yaVa ? null : grupoComplementos(p.clave);
+  if (g && (g.n || g.kit)){
+    pk.comp = p.clave; pk.preg = null; pk.aviso = null;
+    renderPicker();
+    $pk('pkBody').scrollTop = 0;
+    return true;
+  }
+  return false;
 }
 
 // Advertencia antes de agregar un equipo (por ejemplo "no está hecho para cardio"): se confirma o se cancela.
@@ -1729,12 +1768,18 @@ function renderPicker(){
   const cat = pkCategoria();
   const sub = (cat && pk.sub && cat.subs) ? cat.subs.find(s => s.id === pk.sub) : null;
   const alcance = sub ? sub.n : (cat ? cat.n : '');
-  $pk('pkTitle').textContent = !cat ? (pk.q ? 'Resultados en todo el catálogo' : '¿Qué vas a cotizar?') : (sub ? cat.n + ' › ' + sub.n : cat.n);
-  $pk('pkBack').style.display = (cat || pk.q) ? '' : 'none';
+  $pk('pkTitle').textContent = pk.comp ? 'Complementos sugeridos' : !cat ? (pk.q ? 'Resultados en todo el catálogo' : '¿Qué vas a cotizar?') : (sub ? cat.n + ' › ' + sub.n : cat.n);
+  $pk('pkBack').style.display = (cat || pk.q || pk.comp) ? '' : 'none';
   const inp = $pk('pkSearch');
   inp.placeholder = cat ? 'Buscar en ' + alcance + '…' : 'Buscar en todo el catálogo (clave o nombre)…';
   if (inp.value !== pk.q) inp.value = pk.q;
 
+  if (pk.comp){
+    pk.lista = [];
+    $pk('pkBody').innerHTML = pintarComp();
+    actualizarInsignias();
+    return;
+  }
   let html = '';
   if (pk.aviso) html += pintarAviso(pk.aviso);
   else if (pk.preg) html += pintarPregunta(pk.preg, true);
@@ -1828,12 +1873,12 @@ function intentarAgregar(p){
     $pk('pkBody').scrollTop = 0;
     return;
   }
-  agregarDeCatalogo(p);
-  actualizarInsignias();
+  if (!agregarEnPicker(p)) actualizarInsignias();
 }
 
 function subirNivel(){
-  if (pk.aviso) pk.aviso = null;
+  if (pk.comp) pk.comp = null;
+  else if (pk.aviso) pk.aviso = null;
   else if (pk.preg) pk.preg = null;
   else if (pk.q){ pk.q = ''; $pk('pkSearch').value = ''; }
   else if (pk.sinFam){ pk.sinFam = false; pk.vista = 'equipos'; }
@@ -1845,7 +1890,7 @@ function subirNivel(){
 
 function abrirPicker(){
   if (pk.abierto) return;
-  Object.assign(pk, {abierto: true, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos', sinFam: false});
+  Object.assign(pk, {abierto: true, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos', sinFam: false, comp: null});
   $pk('picker').classList.add('open');
   $pk('picker').setAttribute('aria-hidden', 'false');
   document.documentElement.classList.add('pk-open');
@@ -1891,7 +1936,7 @@ $pk('pkSearch').addEventListener('input', ()=>{
   clearTimeout(pkTimer);
   pkTimer = setTimeout(()=>{
     pk.q = $pk('pkSearch').value.trim();
-    pk.preg = null; pk.aviso = null;
+    pk.preg = null; pk.aviso = null; pk.comp = null;
     renderPicker();
     $pk('pkBody').scrollTop = 0;
   }, 90);
@@ -1901,7 +1946,7 @@ $pk('pkSearch').addEventListener('keydown', (e)=>{
   e.preventDefault();
   clearTimeout(pkTimer);
   pk.q = $pk('pkSearch').value.trim();
-  pk.preg = null; pk.aviso = null;
+  pk.preg = null; pk.aviso = null; pk.comp = null;
   renderPicker();
   if (pkEsToque()){ $pk('pkSearch').blur(); return; }   // en el teléfono "Buscar" solo cierra el teclado
   if (pk.q && pk.lista.length && !preguntaPorBusqueda(pk.q)) elegirProducto(pk.lista[0]);   // en la computadora Enter agrega el primer resultado (si hay pregunta de versión, primero se contesta)
@@ -1909,7 +1954,7 @@ $pk('pkSearch').addEventListener('keydown', (e)=>{
 
 // Un solo manejador para todo lo que se toca dentro de la ventana
 $pk('pkBody').addEventListener('click', (e)=>{
-  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-aviso-ok],[data-vista],[data-fam],[data-sinfam],[data-pk-global],[data-pk-libre]');
+  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-aviso-ok],[data-vista],[data-fam],[data-sinfam],[data-comp],[data-kit],[data-pk-seguir],[data-pk-global],[data-pk-libre]');
   if (!t) return;
   if (t.dataset.op !== undefined){
     const o = pk.ops[Number(t.dataset.op)];
@@ -1922,10 +1967,23 @@ $pk('pkBody').addEventListener('click', (e)=>{
   if (t.dataset.pkAvisoOk){
     const p = pk.aviso;
     pk.aviso = null; pk.preg = null;
-    if (p) agregarDeCatalogo(p);
+    if (p && agregarEnPicker(p)) return;
     renderPicker();
     return;
   }
+  if (t.dataset.comp){
+    const p = buscarPrecios(t.dataset.comp), cuerpo = $pk('pkBody'), y = cuerpo.scrollTop;
+    if (p){ agregarDeCatalogo(p); renderPicker(); cuerpo.scrollTop = y; }
+    return;
+  }
+  if (t.dataset.kit){
+    cambiarPorKit(t.dataset.base, t.dataset.kit);
+    pk.comp = t.dataset.kit;
+    renderPicker();
+    $pk('pkBody').scrollTop = 0;
+    return;
+  }
+  if (t.dataset.pkSeguir){ pk.comp = null; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.dataset.fam){ elegirFamilia(t.dataset.fam); return; }
   if (t.dataset.sinfam){ pk.sinFam = true; pk.vista = 'acc'; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.dataset.vista){ pk.vista = t.dataset.vista; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
@@ -2052,32 +2110,43 @@ function filaComplemento(p, boton){
         ${boton || `<button type="button" class="comp-add" data-comp="${esc(p.clave)}" ${precio > 0 ? '' : 'disabled'}>+ Agregar</button>`}
       </div>`;
 }
+// Qué se sugiere para un producto que va en la cotización: aviso, kit, secciones (transductores / accesorios) y lista simple.
+// Regresa null si no hay nada que sugerir. "n" cuenta las filas sugeridas (sin el kit).
+function grupoComplementos(clave){
+  const enCot = new Set(state.items.map(it => claveNorm(it.clave)));
+  const sinCot = lista => (lista || []).map(c => buscarPrecios(c)).filter(p => p && !enCot.has(claveNorm(p.clave)));
+  const k = claveNorm(clave);
+  if (!k) return null;
+  const regla = reglaDe(k);
+  const planas = sinCot(COMP_MAP[k]);
+  if (!regla && !planas.length) return null;
+  const g = {base: clave, aviso: '', kit: null, secciones: [], planas};
+  if (regla){
+    g.aviso = regla.aviso || '';
+    const kitP = regla.kit ? buscarPrecios(regla.kit) : null;
+    if (kitP && !enCot.has(claveNorm(kitP.clave))) g.kit = kitP;
+    [['trans', 'Transductores', regla.transductores, true], ['acc', 'Accesorios', regla.accesorios, false]].forEach(([id, titulo, lista, abierta])=>{
+      const filas = sinCot(lista);
+      if (filas.length) g.secciones.push({id, titulo, filas, abierta});
+    });
+  }
+  g.n = g.planas.length + g.secciones.reduce((s, x) => s + x.filas.length, 0);
+  return (g.n || g.kit || g.aviso) ? g : null;
+}
+function botonKit(g){
+  return `<button type="button" class="comp-add comp-swap" data-kit="${esc(g.kit.clave)}" data-base="${esc(g.base)}" ${(state.tipoPrecio === 'PD' ? g.kit.pd : g.kit.pp) > 0 ? '' : 'disabled'}>Cambiar por el kit</button>`;
+}
 // Panel "Complementos sugeridos": uno por cada producto de la cotización que tenga sugerencias.
 function renderComplementos(){
   const box = document.getElementById('compBox');
   if (!box) return;
-  const enCot = new Set(state.items.map(it => claveNorm(it.clave)));
-  const sinCot = lista => (lista || []).map(c => buscarPrecios(c)).filter(p => p && !enCot.has(claveNorm(p.clave)));
   const grupos = [], vistos = new Set();
   state.items.forEach(it=>{
     const k = claveNorm(it.clave);
     if (!k || vistos.has(k)) return;
     vistos.add(k);
-    const regla = reglaDe(k);
-    const planas = sinCot(COMP_MAP[k]);
-    if (!regla && !planas.length) return;
-    const g = {base: it.clave, aviso: '', kit: null, secciones: [], planas};
-    if (regla){
-      g.aviso = regla.aviso || '';
-      const kitP = regla.kit ? buscarPrecios(regla.kit) : null;
-      if (kitP && !enCot.has(claveNorm(kitP.clave))) g.kit = kitP;
-      [['trans', 'Transductores', regla.transductores, true], ['acc', 'Accesorios', regla.accesorios, false]].forEach(([id, titulo, lista, abierta])=>{
-        const filas = sinCot(lista);
-        if (filas.length) g.secciones.push({id, titulo, filas, abierta});
-      });
-    }
-    const n = g.planas.length + g.secciones.reduce((s, x) => s + x.filas.length, 0);
-    if (n || g.kit || g.aviso) grupos.push(Object.assign(g, {n}));
+    const g = grupoComplementos(it.clave);
+    if (g) grupos.push(g);
   });
   if (!grupos.length){ box.innerHTML = ''; return; }
   box.innerHTML = grupos.map(g=>`
@@ -2090,7 +2159,7 @@ function renderComplementos(){
       ${g.kit ? `
       <div class="comp-kit">
         <div class="comp-kit-lbl">Kit sugerido</div>
-        ${filaComplemento(g.kit, `<button type="button" class="comp-add comp-swap" data-kit="${esc(g.kit.clave)}" data-base="${esc(g.base)}" ${(state.tipoPrecio === 'PD' ? g.kit.pd : g.kit.pp) > 0 ? '' : 'disabled'}>Cambiar por el kit</button>`)}
+        ${filaComplemento(g.kit, botonKit(g))}
       </div>` : ''}
       ${g.secciones.map(s=>{
         const key = claveNorm(g.base) + '|' + s.id;
