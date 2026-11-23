@@ -5,6 +5,13 @@
       "motivo": "La celda de PP de LISTA VET trae un punto en vez del precio. Karen pidió el 2026-11-20 dejar el de antes ($2,645). Si la lista vuelve a traer el número, manda la lista."
     }
   },
-  "cotizables": ["MAESTRO-ELITE"],
-  "_nota": "Excepciones del 2026-11-20 pedidas por Karen. MAESTRO-ELITE dice ¡Próximamente! en la lista, pero se muestra como cotizable (sin precio de lista)."
+  "cotizables": [
+    "MAESTRO-ELITE",
+    "O-SCAN-VET",
+    "G-SCAN-EQUINE",
+    "GRANDE-ELITE-VET",
+    "MAGINIFICO-VET",
+    "SUPREME-VET"
+  ],
+  "_nota": "Excepciones pedidas por Karen. 2026-11-20: MAESTRO-ELITE se muestra como cotizable aunque la lista diga ¡Próximamente!. 2026-11-23: también las 5 resonancias que la lista marca COTIZABLE."
 }

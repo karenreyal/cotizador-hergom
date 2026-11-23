@@ -1,14 +1,14 @@
 {
-  "revisado": "2026-11-22T00:47:56Z",
-  "resultado": "error",
-  "mensaje": "LISTA VET llegó en línea (340 filas) sin archivo para --json y sin fila TOTAL: no se puede verificar una copia manual. No se publicó nada.",
+  "revisado": "2026-11-23T17:21:21Z",
+  "resultado": "ok",
+  "mensaje": "",
   "fuenteModificado": "2026-11-20T17:26:12Z",
   "fuente": "LISTA VET.xlsx",
-  "productos": 221,
+  "productos": 226,
   "cambios": {
-    "nuevos": 1,
+    "nuevos": 5,
     "quitados": 0,
-    "precios": 1,
+    "precios": 0,
     "textos": 0
   },
   "avisos": [
@@ -17,5 +17,6 @@
     "Clave repetida con precios distintos (se usa la primera): P10-4SV",
     "Clave repetida con precios distintos (se usa la primera): P8-2S",
     "Precio público de V-3CFL30V tomado de tools/excepciones.json: la celda de la lista no trae número"
-  ]
+  ],
+  "verificacion": "Lectura directa del conector, sin fila TOTAL en la hoja (filas completas: 340 de 340)"
 }

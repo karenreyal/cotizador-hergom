@@ -14,6 +14,12 @@ Un robot (tarea programada de Claude, ver `PROMPT_ROBOT.md`) los mantiene al dí
 Si algo falla, se conserva el `catalogo.json` anterior y `estado.json` queda con `"resultado": "error"`; la página lo muestra en naranja.
 Si el robot deja de correr más de 60 horas, la página también avisa.
 
+## Si la lista llega en línea y sin fila TOTAL
+Según la sesión, el conector entrega la hoja guardada en un archivo (`--json`, el script la lee directo y comprueba las filas) o pegada en el texto (`--tsv`, el robot la copia a mano a /tmp/lista.txt).
+El viernes 20 y el sábado 21 de noviembre el robot recibió la lista en línea, sin fila TOTAL, y no publicó nada (error "lista no verificable").
+Desde el 2026-11-23 la copia a mano sin fila TOTAL se verifica contra lo ya publicado: cualquier dígito o letra mal copiada aparece como una diferencia, así que el script imprime las diferencias (NUEVO, PRECIO, TEXTO, QUITADO) y sale con código 3; el robot las compara una por una con la lectura original y repite con `--diferencias-verificadas`. Si no hay diferencias, se acepta sola. Si hay más de 12, no se puede revisar a mano: se registra un error y hace falta una fila TOTAL en la lista (suma de PD y PP). Una fila TOTAL sigue siendo la mejor verificación.
+Si la hoja ya no trae las columnas de categoría o notas, el script conserva las que ya estaban publicadas (y para claves nuevas usa el último encabezado de sección, por ejemplo "RAYOS X").
+
 ## Por qué LISTA VET y no la lista maestra
 El conector de Microsoft 365 solo lee archivos de hasta 100 MB. La lista maestra (`Lista Precios Hergom Vet - 2026.xlsx`, sitio kelly) pesa
 más de 127 MB por las imágenes y el conector no la puede abrir; comprimir las imágenes no la bajó de peso.

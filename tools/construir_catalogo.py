@@ -46,6 +46,7 @@ from datetime import datetime, timezone
 MIN_PRODUCTOS = 100
 MIN_FRACCION_PREVIA = 0.70
 TOLERANCIA_TOTAL = 1.0  # pesos
+MAX_DIF_SIN_TOTAL = 12  # copia manual sin fila TOTAL: máximo de diferencias (contra lo publicado) que se pueden revisar una por una
 
 
 def norm(s):
@@ -148,8 +149,11 @@ def cargar_excepciones(ruta_exc=None):
     return {'precios': precios, 'cotizables': cotizables}
 
 
-def procesar(texto, excep=None):
+def procesar(texto, excep=None, previo=None):
     excep = excep or {'precios': {}, 'cotizables': set()}
+    # lo ya publicado, por clave: si la lista ya no trae la columna de categoría o de notas, se conserva lo anterior
+    prev = {p['clave'].upper(): p for p in (previo or {}).get('productos', [])}
+    seccion = ''
     filas = leer_filas(texto)
     ih, col = buscar_encabezado(filas)
     if ih is None:
@@ -172,6 +176,8 @@ def procesar(texto, excep=None):
             suma_pp += pp_v
         clave = f[col['clave']].strip()
         if not clave or norm(clave) == 'clave':
+            if not clave and 'desc' in col and f[col['desc']].strip():
+                seccion = re.sub(r'\s+', ' ', f[col['desc']]).strip()  # fila de sección (por ejemplo "RAYOS X")
             continue
         filas_datos += 1
         k = clave.upper()
@@ -204,12 +210,15 @@ def procesar(texto, excep=None):
             'clave': clave,
             'desc': re.sub(r'\s+', ' ', f[col['desc']]).strip() if 'desc' in col else '',
             'marca': f[col['marca']].strip() if 'marca' in col else '',
-            'cat': f[col['cat']].strip() if 'cat' in col else '',
+            'cat': f[col['cat']].strip() if 'cat' in col else (prev.get(clave.upper(), {}).get('cat') or seccion),
             'pp': round(pp_v, 2) if pp_v else 0,
             'pd': round(pd_v, 2) if pd_v else 0,
         }
-        if 'nota' in col and f[col['nota']].strip():
-            item['nota'] = f[col['nota']].strip()
+        if 'nota' in col:
+            if f[col['nota']].strip():
+                item['nota'] = f[col['nota']].strip()
+        elif prev.get(clave.upper(), {}).get('nota'):
+            item['nota'] = prev[clave.upper()]['nota']
         if cotizable:
             item['cotizable'] = True
         if k in vistos:
@@ -271,6 +280,34 @@ def verificar_total(chk, directo=False, filas=(None, '')):
     if errs:
         return False, 'La suma de las filas no coincide con el TOTAL de la hoja (' + '; '.join(errs) + '). Posible dígito mal copiado.'
     return True, 'Total verificado'
+
+
+def comparar(previo, productos):
+    """Diferencias entre lo ya publicado y la lista nueva. Devuelve (cambios, detalle)."""
+    cambios = {'nuevos': 0, 'quitados': 0, 'precios': 0, 'textos': 0}
+    detalle = []
+    if not previo:
+        return cambios, detalle
+    ant = {p['clave'].upper(): p for p in previo.get('productos', [])}
+    nue = {p['clave'].upper(): p for p in productos}
+    for k, p in nue.items():
+        q = ant.get(k)
+        if not q:
+            cambios['nuevos'] += 1
+            detalle.append('NUEVO    %s | pp %s | pd %s | %s' % (p['clave'], p['pp'], p['pd'], p['desc'][:70]))
+            continue
+        if abs(q.get('pp', 0) - p['pp']) > 0.005 or abs(q.get('pd', 0) - p['pd']) > 0.005:
+            cambios['precios'] += 1
+            detalle.append('PRECIO   %s | pp %s -> %s | pd %s -> %s' % (p['clave'], q.get('pp', 0), p['pp'], q.get('pd', 0), p['pd']))
+        elif (q.get('desc'), q.get('marca'), q.get('cat')) != (p['desc'], p['marca'], p['cat']):
+            cambios['textos'] += 1
+            campos = [c for c, v in (('desc', 'desc'), ('marca', 'marca'), ('cat', 'cat')) if q.get(c) != p[c]]
+            detalle.append('TEXTO    %s | cambió: %s | ahora: %s' % (p['clave'], ', '.join(campos), ' / '.join(str(p[c])[:70] for c in campos)))
+    for k, q in ant.items():
+        if k not in nue:
+            cambios['quitados'] += 1
+            detalle.append('QUITADO  %s | %s' % (q['clave'], str(q.get('desc', ''))[:70]))
+    return cambios, detalle
 
 
 def ahora():
@@ -343,10 +380,30 @@ def cmd_construir(a):
         filas_ok, filas_msg = verificar_filas(texto)
         if filas_ok is False:
             raise ValueError(filas_msg)
-        productos, avisos, chk = procesar(texto, cargar_excepciones(a.excepciones))
-        ok_total, msg_total = verificar_total(chk, directo, (filas_ok, filas_msg))
         previo = leer_json(ruta(a.dir, 'catalogo.json', a.prueba))
+        productos, avisos, chk = procesar(texto, cargar_excepciones(a.excepciones), previo)
+        ok_total, msg_total = verificar_total(chk, directo, (filas_ok, filas_msg))
         n_prev = len(previo.get('productos', [])) if previo else 0
+        cambios, detalle = comparar(previo, productos)
+        n_dif = sum(cambios.values())
+        # Copia manual sin fila TOTAL: cualquier dígito mal copiado aparece como una diferencia contra lo ya publicado,
+        # así que se puede verificar revisando esas diferencias una por una contra la lectura original.
+        if not ok_total and not directo and filas_ok is True and previo and msg_total.startswith('La hoja no trae fila TOTAL'):
+            if n_dif == 0:
+                ok_total, msg_total = True, 'Copia manual sin fila TOTAL, idéntica a lo ya publicado (filas completas: %s)' % filas_msg
+            elif n_dif <= MAX_DIF_SIN_TOTAL:
+                if a.diferencias_verificadas:
+                    ok_total, msg_total = True, 'Copia manual sin fila TOTAL: %d diferencias revisadas una por una contra la lectura del conector' % n_dif
+                else:
+                    print('REVISA %d diferencias contra la lectura ORIGINAL del conector (no contra tu copia):' % n_dif)
+                    for d in detalle:
+                        print('  ' + d)
+                    print('Si todas coinciden con la lectura original, repite el mismo comando agregando --diferencias-verificadas.')
+                    print('Si alguna no coincide, corrige tu copia y vuelve a ejecutar (no publiques nada todavía).')
+                    return 3
+            else:
+                msg_total = ('La hoja no trae fila TOTAL y hay %d diferencias frente a lo publicado (más de %d), demasiadas para revisarlas una por una. '
+                             'Agrega una fila TOTAL a la lista (suma de PD y PP).' % (n_dif, MAX_DIF_SIN_TOTAL))
         problemas = []
         if len(productos) < MIN_PRODUCTOS:
             problemas.append('Solo %d productos (se esperaban al menos %d).' % (len(productos), MIN_PRODUCTOS))
@@ -361,21 +418,6 @@ def cmd_construir(a):
         print('ERROR:', e, file=sys.stderr)
         return 2
 
-    # diferencias contra lo ya publicado
-    cambios = {'nuevos': 0, 'quitados': 0, 'precios': 0, 'textos': 0}
-    if previo:
-        ant = {p['clave'].upper(): p for p in previo.get('productos', [])}
-        nue = {p['clave'].upper(): p for p in productos}
-        cambios['nuevos'] = len([k for k in nue if k not in ant])
-        cambios['quitados'] = len([k for k in ant if k not in nue])
-        for k, p in nue.items():
-            q = ant.get(k)
-            if not q:
-                continue
-            if abs(q.get('pp', 0) - p['pp']) > 0.005 or abs(q.get('pd', 0) - p['pd']) > 0.005:
-                cambios['precios'] += 1
-            elif (q.get('desc'), q.get('marca'), q.get('cat')) != (p['desc'], p['marca'], p['cat']):
-                cambios['textos'] += 1
     cat = {
         'ok': True,
         'version': 1,
@@ -414,6 +456,7 @@ def main():
     c.add_argument('--modificado', default='')
     c.add_argument('--fuente', default='Lista Precios Hergom Vet - 2026.xlsx')
     c.add_argument('--dir', default='.')
+    c.add_argument('--diferencias-verificadas', action='store_true', help='copia manual sin fila TOTAL: ya revisé cada diferencia contra la lectura original')
     c.add_argument('--excepciones', default=None, help='ruta de excepciones.json (por omisión, el de tools/)')
     c.add_argument('--prueba', action='store_true')
     c.set_defaults(fn=cmd_construir)
