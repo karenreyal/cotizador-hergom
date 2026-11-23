@@ -427,6 +427,10 @@
   .comp-sec > summary::before{content:'▸'; font-size:12px; color:var(--azul-inst); transition:transform .15s;}
   .comp-sec[open] > summary::before{transform:rotate(90deg);}
   .comp-n{font-size:11px; font-weight:700; background:#dbe9f6; color:var(--navy); border-radius:999px; padding:1px 8px;}
+  .pk-tile.pk-fam{min-height:64px; justify-content:center;}
+  .pk-tile.pk-fam .pk-tn{font-size:16px;}
+  .pk-extra{text-align:center; margin-top:14px;}
+  .pk-extra .link-btn{font-size:14px;}
   html.pk-open, html.pk-open body{overflow:hidden;}
   html.pk-open .toast-add{bottom:92px;}
 
@@ -1550,6 +1554,21 @@ const CATEGORIAS_ACCESORIOS = {
     'L13-3', '6C2V', '6C2', 'C11-3V50', 'L13-3V', 'C5-1V50', 'P8-2V50', 'P8-2V', 'L12-4S', 'L13-3NS', 'C13-3SV'
   ]
 };
+// FAMILIAS: en estas subcategorías, al entrar se ven solo los equipos (con el nombre que se vende) y NO la lista de claves.
+// Al elegir uno se hacen sus preguntas (versión básica/avanzada, aviso) y recién entonces se agrega la clave que corresponda.
+// "claves": las claves de esa familia (la primera decide qué pregunta se hace). Los kits, accesorios y transductores salen
+// en la sugerencia de complementos, al buscar por clave o en el enlace "Accesorios y transductores".
+const FAMILIAS = {
+  'ultrasonidos/portatiles': [
+    {n: 'VETUSE7',      claves: ['VETUSE7', 'VETUSE7ADV']},
+    {n: 'VETUSE5',      claves: ['VETUSE5', 'VETUSE5ADV']},
+    {n: 'VETUSE3',      claves: ['VETUSE3', 'VETUSE3ADV']},
+    {n: 'Z60',          claves: ['Z60VET', 'Z60ADV']},
+    {n: 'DP50',         claves: ['DP50V']},
+    {n: 'DP10',         claves: ['DP10V']},
+    {n: 'CTS-800L5VET', claves: ['CTS-800L5VET']}
+  ]
+};
 const CATEGORIAS_PRODUCTO = {
   'anestesia':   ['VETA3XBAIN', '115-00967A-00', '115-00966A-00', 'CARRITOBV', '6800-30-50876', 'VETA4AV'],
   'monitores':   ['9101-20-58104', '6800-30-50876', 'VETA4AV'],
@@ -1633,7 +1652,7 @@ document.getElementById('btnManualAdd').addEventListener('click', ()=>{
 
 // ---------- ventana "Agregar producto" ----------
 const PK_MAX_GLOBAL = 60;   // resultados que se muestran al buscar en todo el catálogo
-const pk = {abierto: false, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos', lista: [], ops: []};
+const pk = {abierto: false, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos', sinFam: false, lista: [], ops: []};
 let pkHist = false, pkTimer = null;
 const $pk = id => document.getElementById(id);
 const pkEsToque = () => !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
@@ -1643,7 +1662,7 @@ function pkCategoria(){
   return pk.cat === 'otros' ? CAT_OTROS : (CATEGORIAS.find(c => c.id === pk.cat) || null);
 }
 function plural(n){ return n + ' producto' + (n === 1 ? '' : 's'); }
-const pkTieneNivel = () => !!(pk.aviso || pk.preg || pk.sub || pk.todo || pk.cat || pk.q);
+const pkTieneNivel = () => !!(pk.aviso || pk.preg || pk.sinFam || pk.sub || pk.todo || pk.cat || pk.q);
 
 function pintarPregunta(preg, conCancelar){
   const arm = armarPregunta(preg);
@@ -1659,6 +1678,37 @@ function pintarAviso(p){
     '<div class="aviso-txt">' + esc(avisoDe(p.clave)) + '</div>' +
     '<div class="aviso-btns"><button type="button" class="btn-primary" data-pk-aviso-ok="1">Agregar de todos modos</button>' +
     '<button type="button" class="link-btn" data-pk-cancel="1">Cancelar</button></div></div>';
+}
+
+// Familias de la subcategoría que se está viendo (solo las que tienen algo en el catálogo), o null si esa subcategoría no usa familias.
+function familiasActuales(cat){
+  if (!cat || !pk.sub || pk.q || pk.sinFam) return null;
+  const fs = FAMILIAS[cat.id + '/' + pk.sub];
+  if (!fs) return null;
+  const vivas = fs.filter(f => f.claves.some(c => buscarPrecios(c)));
+  return vivas.length ? vivas : null;
+}
+function pintarFamilias(fams){
+  let h = '<div class="pk-sub">¿Cuál equipo?</div><div class="pk-grid">';
+  h += fams.map(f => `<button type="button" class="pk-tile pk-fam" data-fam="${esc(f.n)}"><span class="pk-tn">${esc(f.n)}</span></button>`).join('');
+  h += '</div><div class="pk-extra"><button type="button" class="link-btn" data-sinfam="1">Accesorios y transductores</button></div>';
+  return h;
+}
+// Elegir una familia: con pregunta de versión se pregunta primero; si no, se agrega (con su aviso si lo tiene).
+function elegirFamilia(nombre){
+  const cat = pkCategoria();
+  const fs = (cat && pk.sub && FAMILIAS[cat.id + '/' + pk.sub]) || [];
+  const f = fs.find(x => x.n === nombre);
+  if (!f) return;
+  const preg = preguntaPorClave(f.claves[0]);
+  if (preg && armarPregunta(preg)){
+    pk.preg = preg;
+    renderPicker();
+    $pk('pkBody').scrollTop = 0;
+    return;
+  }
+  const p = buscarPrecios(f.claves[0]);
+  if (p) intentarAgregar(p);
 }
 
 function filaProducto(p){
@@ -1691,7 +1741,11 @@ function renderPicker(){
   else { const pq = pk.q ? preguntaPorBusqueda(pk.q) : null; if (pq) html += pintarPregunta(pq, false); }
 
   const verTiles = !pk.q && (!cat || (cat.subs && !pk.sub && !pk.todo));
-  if (verTiles){
+  const fams = familiasActuales(cat);
+  if (fams){
+    pk.lista = [];
+    if (!pk.preg && !pk.aviso) html += pintarFamilias(fams);   // con una pregunta o un aviso a la vista, solo se ve la tarjeta
+  } else if (verTiles){
     pk.lista = [];
     if (!cat){
       html += '<div class="pk-sub">Elige lo que vas a cotizar, o escribe arriba la clave o el nombre.</div><div class="pk-grid">';
@@ -1782,6 +1836,7 @@ function subirNivel(){
   if (pk.aviso) pk.aviso = null;
   else if (pk.preg) pk.preg = null;
   else if (pk.q){ pk.q = ''; $pk('pkSearch').value = ''; }
+  else if (pk.sinFam){ pk.sinFam = false; pk.vista = 'equipos'; }
   else if (pk.sub || pk.todo){ pk.sub = null; pk.todo = false; pk.vista = 'equipos'; }
   else if (pk.cat){ pk.cat = null; pk.vista = 'equipos'; }
   renderPicker();
@@ -1790,7 +1845,7 @@ function subirNivel(){
 
 function abrirPicker(){
   if (pk.abierto) return;
-  Object.assign(pk, {abierto: true, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos'});
+  Object.assign(pk, {abierto: true, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos', sinFam: false});
   $pk('picker').classList.add('open');
   $pk('picker').setAttribute('aria-hidden', 'false');
   document.documentElement.classList.add('pk-open');
@@ -1854,7 +1909,7 @@ $pk('pkSearch').addEventListener('keydown', (e)=>{
 
 // Un solo manejador para todo lo que se toca dentro de la ventana
 $pk('pkBody').addEventListener('click', (e)=>{
-  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-aviso-ok],[data-vista],[data-pk-global],[data-pk-libre]');
+  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-aviso-ok],[data-vista],[data-fam],[data-sinfam],[data-pk-global],[data-pk-libre]');
   if (!t) return;
   if (t.dataset.op !== undefined){
     const o = pk.ops[Number(t.dataset.op)];
@@ -1871,17 +1926,19 @@ $pk('pkBody').addEventListener('click', (e)=>{
     renderPicker();
     return;
   }
+  if (t.dataset.fam){ elegirFamilia(t.dataset.fam); return; }
+  if (t.dataset.sinfam){ pk.sinFam = true; pk.vista = 'acc'; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.dataset.vista){ pk.vista = t.dataset.vista; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.dataset.pkCancel){ pk.preg = null; pk.aviso = null; renderPicker(); return; }
-  if (t.dataset.pkGlobal){ pk.cat = null; pk.sub = null; pk.todo = false; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.pkGlobal){ pk.cat = null; pk.sub = null; pk.todo = false; pk.sinFam = false; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.dataset.pkLibre){
     addItem({marca:'', clave:'', desc:'Descripción del producto', pp:0, pd:0, cantidad:1});
     cerrarYVerCotizacion();
     return;
   }
-  if (t.dataset.cat){ pk.cat = t.dataset.cat; pk.sub = null; pk.todo = false; pk.vista = 'equipos'; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
-  if (t.dataset.sub){ pk.sub = t.dataset.sub; pk.vista = 'equipos'; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
-  if (t.dataset.todo){ pk.todo = true; pk.vista = 'equipos'; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.cat){ pk.cat = t.dataset.cat; pk.sub = null; pk.todo = false; pk.sinFam = false; pk.vista = 'equipos'; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.sub){ pk.sub = t.dataset.sub; pk.sinFam = false; pk.vista = 'equipos'; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.todo){ pk.todo = true; pk.sinFam = false; pk.vista = 'equipos'; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.classList.contains('pk-item')){
     const p = buscarPrecios(t.dataset.clave);
     if (p) elegirProducto(p);
