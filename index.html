@@ -404,6 +404,29 @@
   .pk-mas{font-size:12.5px; color:var(--muted); text-align:center; padding:6px 0 10px;}
   .pk-body .preg-card{margin:0 0 12px;}
   .pk-body .preg-opt{min-height:56px;}
+  .pk-chips{display:flex; gap:8px; margin:0 0 10px; flex-wrap:wrap;}
+  .pk-chip{flex:1 1 auto; border:1.5px solid var(--navy); background:#fff; color:var(--navy); border-radius:999px; padding:9px 14px; min-height:44px; font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer;}
+  .pk-chip b{font-weight:600; opacity:.7; margin-left:3px;}
+  .pk-chip.on{background:var(--navy); color:#fff;}
+  .aviso-card{margin:0 0 12px; border:1.5px solid #e0a23a; background:#fff4dd; border-radius:12px; padding:13px;}
+  .aviso-title{font-family:'Poppins','Trebuchet MS',Calibri,Arial,sans-serif; font-size:15px; font-weight:700; color:var(--navy-dark);}
+  .aviso-txt{font-size:14px; color:#6b4500; margin:5px 0 11px; line-height:1.4;}
+  .aviso-btns{display:flex; flex-direction:column; align-items:stretch; gap:2px;}
+  .aviso-btns .btn-primary{margin-top:0; min-height:48px;}
+  .aviso-btns .link-btn{align-self:center;}
+  .preg-opt.preg-prox, .preg-opt:disabled{opacity:.55; cursor:default; background:#f3f4f6; border-color:#c9ced6;}
+  .preg-opt.preg-prox:hover{background:#f3f4f6;}
+  .comp-aviso{margin:2px 0 8px; padding:8px 10px; border-radius:8px; background:#fff4dd; border:1px solid #e0a23a; color:#6b4500; font-size:12.5px; font-weight:700; line-height:1.35;}
+  .comp-kit{margin:2px 0 8px; border:1px solid #7cc59a; background:#f4fbf7; border-radius:9px; padding:6px 9px 2px;}
+  .comp-kit-lbl{font-size:11px; font-weight:700; color:#1a7f37; text-transform:uppercase; letter-spacing:.4px;}
+  .comp-kit .comp-row{border-top:none; padding-top:5px;}
+  .comp-swap{max-width:104px; white-space:normal; text-align:center; line-height:1.2;}
+  .comp-sec{border-top:1px solid #dbe9f6; margin:0 0 4px;}
+  .comp-sec > summary{list-style:none; cursor:pointer; padding:9px 0; font-size:12.5px; font-weight:700; color:var(--navy-dark); display:flex; align-items:center; gap:7px; min-height:36px;}
+  .comp-sec > summary::-webkit-details-marker{display:none;}
+  .comp-sec > summary::before{content:'▸'; font-size:12px; color:var(--azul-inst); transition:transform .15s;}
+  .comp-sec[open] > summary::before{transform:rotate(90deg);}
+  .comp-n{font-size:11px; font-weight:700; background:#dbe9f6; color:var(--navy); border-radius:999px; padding:1px 8px;}
   html.pk-open, html.pk-open body{overflow:hidden;}
   html.pk-open .toast-add{bottom:92px;}
 
@@ -884,36 +907,94 @@ let itemSeq = 0;
 
 // ---------- COMPLEMENTOS SUGERIDOS (para subir el ticket promedio) ----------
 // Para agregar o cambiar sugerencias solo se edita este bloque.
-// COMPLEMENTOS: cuando una de estas claves está en la cotización, se sugieren las claves de su lista.
+
+// COMPLEMENTOS (lista simple): cuando una de estas claves está en la cotización, se sugieren las claves de su lista.
 const COMPLEMENTOS = {
   // --- Rayos X ---
   'VETIGEN-P50':  ['VETIGENTR', 'VETIPADPLUSV', 'VETIPADC1V', 'BXJJ-X004', 'BX-005'],
   'VETIPADPLUSV': ['VETIGEN-P50', 'VETIGENTR'],
-  'VETIPADC1V':   ['VETIGEN-P50', 'VETIGENTR'],
-  // --- Ultrasonido VETUS E7 ---
-  'VETUSE7':      ['009-003702-00', 'iCOVERKIT', 'DUALVETUSE7', 'C11-3S', 'C5-1SV', 'L13-3NSV', 'L16-4HSV'],
-  'VETUSE7ADV':   ['009-003702-00', 'iCOVERKIT', 'DUALVETUSE7', 'C11-3S', 'C5-1SV', 'L13-3NSV', 'L16-4HSV',
-                   'P10-4SV', 'P8-2S', 'P4-2SV', '9101-20-58104', 'ECGVETUSE7']
+  'VETIPADC1V':   ['VETIGEN-P50', 'VETIGENTR']
 };
+
+// REGLAS_EQUIPO (con secciones): lo que se sugiere para cada equipo cuando está en la cotización.
+//   kit:           clave del kit que se ofrece en lugar del equipo (botón "Cambiar por el kit")
+//   aviso:         advertencia que sale al agregar el equipo y mientras siga en la cotización
+//   transductores: claves sugeridas en la sección "Transductores"
+//   accesorios:    claves sugeridas en la sección "Accesorios"
+//   como + incluye: el producto (normalmente un kit) se sugiere igual que otro equipo ("como"),
+//                   pero sin lo que el kit ya trae ("incluye")
+// Lo que no esté en el catálogo se omite solo.
+const ACC_VETUS = ['009-003702-00', 'UBANKV', 'VETUSMLT', '048-00160A-00', '048-004129-00', 'MT1V', 'MT2', 'MT3-VET'];
+const TRANS_E5  = ['C6-1MV', 'HS14-5LMV', 'L13-3MV', 'L14-3MV', 'MC11-3MV'];
+const TRANS_E7  = ['C11-3S', 'C5-1SV', 'L13-3NSV', 'L16-4HSV'];
+const TRANS_DP  = ['35C20EA', '65C15EAV', '75L38EAV', '75L50EAV'];
+const AVISO_NO_CARDIO = 'Este equipo no está hecho para cardio.';
+const REGLAS_EQUIPO = {
+  // --- Ultrasonidos portátiles ---
+  'VETUSE3':    {transductores: ['6C2MV', 'L12-3MV', '6LE5VMV', 'C5-2M'],
+                 accesorios: ACC_VETUS},
+  'VETUSE3ADV': {transductores: ['6C2MV', 'L12-3MV', 'P10-2MV', 'P8-2MV', '6LE5VMV', 'C5-2M'],
+                 accesorios: ACC_VETUS},
+  'VETUSE5':    {kit: 'VETUSE5ML',
+                 transductores: TRANS_E5,
+                 accesorios: ACC_VETUS},
+  'VETUSE5ADV': {transductores: TRANS_E5.concat(['P10-4MV', 'P4-2MV', 'P8-2MV']),
+                 accesorios: ACC_VETUS},
+  'VETUSE5ML':  {como: 'VETUSE5', incluye: ['MC11-3MV', 'L14-3MV']},
+  'VETUSE7':    {transductores: TRANS_E7,
+                 accesorios: ['009-003702-00', 'iCOVERKIT', 'DUALVETUSE7'].concat(ACC_VETUS.slice(1))},
+  'VETUSE7ADV': {transductores: TRANS_E7.concat(['P10-4SV', 'P8-2S', 'P4-2SV']),
+                 accesorios: ['009-003702-00', 'iCOVERKIT', 'DUALVETUSE7', '9101-20-58104'].concat(ACC_VETUS.slice(1))},
+  'Z60VET':     {transductores: ['L14-6PV', '7L4PV', '6C2PV'],
+                 accesorios: ['ECGZ60V', 'UMT-170', '048-00160A-00', '048-004129-00']},
+  'Z60ADV':     {transductores: ['L14-6PV', '7L4PV', '6C2PV', 'P8-2PV'],
+                 accesorios: ['UMT-170', '048-00160A-00', '048-004129-00']},
+  'DP50V':      {aviso: AVISO_NO_CARDIO, kit: 'DP50VM',
+                 transductores: TRANS_DP,
+                 accesorios: ['UMT-170', '048-00160A-00', '048-004129-00']},
+  'DP50VM':     {como: 'DP50V', incluye: ['65C15EAV']},
+  'DP10V':      {aviso: AVISO_NO_CARDIO, kit: 'KITDP10VMC',
+                 transductores: TRANS_DP,
+                 accesorios: ['115-081316-00', '048-00160A-00', 'UMT-170']},
+  'DP10VB':     {como: 'DP10V'},
+  'KITDP10VMC': {como: 'DP10V', incluye: ['65C15EAV', '115-081316-00']}
+};
+
 // PREGUNTAS_VERSION: preguntas que se hacen ANTES de agregar el equipo.
 //   busquedas: si lo que escriben en el buscador es exactamente esto, la pregunta sale arriba de los resultados.
 //   claves:    si eligen alguna de estas claves desde otros resultados (sin haber contestado), también se pregunta.
-//   opciones:  lo que se agrega según la respuesta.
+//   opciones:  lo que se agrega según la respuesta ("proximamente": se muestra apagada mientras no esté en el catálogo).
+const TXT_VERSION = '¿Buscas la versión básica (abdomen) o avanzada (para cardio)?';
+const OP_BASICA   = 'Básica (abdomen)';
+const OP_AVANZADA = 'Avanzada (cardio)';
 const PREGUNTAS_VERSION = [
-  {
-    texto: '¿Buscas la versión básica o avanzada (para cardio)?',
-    busquedas: ['VETUSE7'],
-    claves: ['VETUSE7', 'VETUSE7ADV'],
-    opciones: [
-      { etiqueta: 'Básica',            clave: 'VETUSE7'    },
-      { etiqueta: 'Avanzada (cardio)', clave: 'VETUSE7ADV' }
-    ]
-  }
+  { texto: TXT_VERSION, busquedas: ['VETUSE3'], claves: ['VETUSE3', 'VETUSE3ADV'],
+    opciones: [{etiqueta: OP_BASICA, clave: 'VETUSE3'}, {etiqueta: OP_AVANZADA, clave: 'VETUSE3ADV'}] },
+  { texto: TXT_VERSION, busquedas: ['VETUSE5'], claves: ['VETUSE5', 'VETUSE5ADV'],
+    opciones: [{etiqueta: OP_BASICA, clave: 'VETUSE5'}, {etiqueta: OP_AVANZADA, clave: 'VETUSE5ADV', proximamente: true}] },
+  { texto: TXT_VERSION, busquedas: ['VETUSE7'], claves: ['VETUSE7', 'VETUSE7ADV'],
+    opciones: [{etiqueta: OP_BASICA, clave: 'VETUSE7'}, {etiqueta: OP_AVANZADA, clave: 'VETUSE7ADV'}] },
+  { texto: TXT_VERSION, busquedas: ['Z60'], claves: ['Z60VET', 'Z60ADV'],
+    opciones: [{etiqueta: OP_BASICA, clave: 'Z60VET'}, {etiqueta: OP_AVANZADA, clave: 'Z60ADV'}] }
 ];
 const claveNorm = c => String(c || '').trim().toUpperCase();
 const busquedaNorm = q => String(q || '').toUpperCase().replace(/[\s\-_.]+/g, '');
 const COMP_MAP = {};
 Object.keys(COMPLEMENTOS).forEach(k => { COMP_MAP[claveNorm(k)] = COMPLEMENTOS[k]; });
+const REGLAS_MAP = {};
+Object.keys(REGLAS_EQUIPO).forEach(k => { REGLAS_MAP[claveNorm(k)] = REGLAS_EQUIPO[k]; });
+// Regla de un producto ya resuelta (los kits heredan la del equipo, sin lo que ya traen). null si no tiene.
+function reglaDe(clave){
+  const r = REGLAS_MAP[claveNorm(clave)];
+  if (!r) return null;
+  if (!r.como) return r;
+  const b = REGLAS_MAP[claveNorm(r.como)];
+  if (!b) return null;
+  const fuera = new Set((r.incluye || []).map(claveNorm));
+  const quita = l => (l || []).filter(c => !fuera.has(claveNorm(c)));
+  return {aviso: r.aviso || b.aviso, transductores: quita(b.transductores), accesorios: quita(b.accesorios)};
+}
+function avisoDe(clave){ const r = reglaDe(clave); return (r && r.aviso) || ''; }
 function preguntaPorBusqueda(q){ return PREGUNTAS_VERSION.find(x => x.busquedas.some(b => busquedaNorm(b) === busquedaNorm(q))) || null; }
 function preguntaPorClave(c){ return PREGUNTAS_VERSION.find(x => x.claves.some(k => claveNorm(k) === claveNorm(c))) || null; }
 let lastAddedId = null;
@@ -1450,11 +1531,13 @@ const CAT_HOJA = {
 };
 // CATEGORIAS_PRODUCTO: casos que la categoría de la lista no resuelve (accesorios, transductores, productos en dos categorías).
 // Clave -> categoría o "categoría/subcategoría". Un producto que aparece aquí usa SOLO estas categorías (puede estar en varias).
-const CATEGORIAS_PRODUCTO = {
+// CATEGORIAS_ACCESORIOS: igual, pero para accesorios y transductores. En la ventana salen en su propia pestaña
+// ("Accesorios y transductores"), separados de los equipos, y también se encuentran al buscar.
+const CATEGORIAS_ACCESORIOS = {
   'ultrasonidos/portatiles': [
     // accesorios de los portátiles
     '009-003702-00', 'iCOVERKIT', 'DUALVETUSE7', '9101-20-58104', 'ECGVETUSE7', 'UBANKV', 'VETUSMLT', '048-00160A-00', '048-004129-00',
-    'MT1V', 'MT2', 'MT3-VET', 'ECGZ60V', 'UMT-170',
+    'MT1V', 'MT2', 'MT3-VET', 'ECGZ60V', 'UMT-170', '115-081316-00',
     // transductores de los portátiles (E7, E5, E3, Z60, DP50 y DP10)
     'C11-3S', 'C5-1SV', 'L13-3NSV', 'L16-4HSV', 'P10-4SV', 'P8-2S', 'P4-2SV',
     'C6-1MV', 'HS14-5LMV', 'L13-3MV', 'L14-3MV', 'MC11-3MV', 'P10-4MV', 'P4-2MV', 'P8-2MV',
@@ -1465,7 +1548,9 @@ const CATEGORIAS_PRODUCTO = {
     '115-00706A-00',
     'C11-3S', 'L16-4HSV', 'P10-4SV', 'P8-2S', '6C2MV', 'L12-3MV', 'P10-2MV', 'P8-2MV', 'C5-2M',
     'L13-3', '6C2V', '6C2', 'C11-3V50', 'L13-3V', 'C5-1V50', 'P8-2V50', 'P8-2V', 'L12-4S', 'L13-3NS', 'C13-3SV'
-  ],
+  ]
+};
+const CATEGORIAS_PRODUCTO = {
   'anestesia':   ['VETA3XBAIN', '115-00967A-00', '115-00966A-00', 'CARRITOBV', '6800-30-50876', 'VETA4AV'],
   'monitores':   ['9101-20-58104', '6800-30-50876', 'VETA4AV'],
   'bombas/infusion':  ['MICROGOTERO', 'NORMOGOTERO', 'BENEFUSION-EDS'],
@@ -1480,9 +1565,18 @@ const CAT_OTROS = {id: 'otros', n: 'Otros productos'};
 const RUTAS_VALIDAS = new Set();
 CATEGORIAS.forEach(c => { RUTAS_VALIDAS.add(c.id); (c.subs || []).forEach(s => RUTAS_VALIDAS.add(c.id + '/' + s.id)); });
 const RUTAS_PRODUCTO = {};   // clave -> categorías, armado a partir de CATEGORIAS_PRODUCTO
-Object.keys(CATEGORIAS_PRODUCTO).forEach(ruta => {
-  CATEGORIAS_PRODUCTO[ruta].forEach(c => { const k = claveNorm(c); (RUTAS_PRODUCTO[k] = RUTAS_PRODUCTO[k] || []).push(ruta); });
+const ES_ACCESORIO = new Set();   // claves que se muestran en la pestaña "Accesorios y transductores"
+[CATEGORIAS_PRODUCTO, CATEGORIAS_ACCESORIOS].forEach(bloque => {
+  Object.keys(bloque).forEach(ruta => {
+    bloque[ruta].forEach(c => {
+      const k = claveNorm(c);
+      const rs = (RUTAS_PRODUCTO[k] = RUTAS_PRODUCTO[k] || []);
+      if (rs.indexOf(ruta) < 0) rs.push(ruta);
+      if (bloque === CATEGORIAS_ACCESORIOS) ES_ACCESORIO.add(k);
+    });
+  });
 });
+const esAccesorio = p => ES_ACCESORIO.has(claveNorm(p.clave));
 const _rutasCache = new WeakMap();
 function rutasDe(p){
   if (_rutasCache.has(p)) return _rutasCache.get(p);
@@ -1539,7 +1633,7 @@ document.getElementById('btnManualAdd').addEventListener('click', ()=>{
 
 // ---------- ventana "Agregar producto" ----------
 const PK_MAX_GLOBAL = 60;   // resultados que se muestran al buscar en todo el catálogo
-const pk = {abierto: false, cat: null, sub: null, todo: false, q: '', preg: null, lista: [], ops: []};
+const pk = {abierto: false, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos', lista: [], ops: []};
 let pkHist = false, pkTimer = null;
 const $pk = id => document.getElementById(id);
 const pkEsToque = () => !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
@@ -1549,6 +1643,7 @@ function pkCategoria(){
   return pk.cat === 'otros' ? CAT_OTROS : (CATEGORIAS.find(c => c.id === pk.cat) || null);
 }
 function plural(n){ return n + ' producto' + (n === 1 ? '' : 's'); }
+const pkTieneNivel = () => !!(pk.aviso || pk.preg || pk.sub || pk.todo || pk.cat || pk.q);
 
 function pintarPregunta(preg, conCancelar){
   const arm = armarPregunta(preg);
@@ -1556,6 +1651,14 @@ function pintarPregunta(preg, conCancelar){
   pk.ops = arm.ops;
   return '<div class="preg-card" id="pkPreg">' + arm.html +
     (conCancelar ? '<div class="manual-add"><button type="button" class="link-btn" data-pk-cancel="1">Cancelar</button></div>' : '') + '</div>';
+}
+
+// Advertencia antes de agregar un equipo (por ejemplo "no está hecho para cardio"): se confirma o se cancela.
+function pintarAviso(p){
+  return '<div class="aviso-card" id="pkAviso"><div class="aviso-title">⚠️ ' + esc(p.clave) + '</div>' +
+    '<div class="aviso-txt">' + esc(avisoDe(p.clave)) + '</div>' +
+    '<div class="aviso-btns"><button type="button" class="btn-primary" data-pk-aviso-ok="1">Agregar de todos modos</button>' +
+    '<button type="button" class="link-btn" data-pk-cancel="1">Cancelar</button></div></div>';
 }
 
 function filaProducto(p){
@@ -1583,7 +1686,8 @@ function renderPicker(){
   if (inp.value !== pk.q) inp.value = pk.q;
 
   let html = '';
-  if (pk.preg) html += pintarPregunta(pk.preg, true);
+  if (pk.aviso) html += pintarAviso(pk.aviso);
+  else if (pk.preg) html += pintarPregunta(pk.preg, true);
   else { const pq = pk.q ? preguntaPorBusqueda(pk.q) : null; if (pq) html += pintarPregunta(pq, false); }
 
   const verTiles = !pk.q && (!cat || (cat.subs && !pk.sub && !pk.todo));
@@ -1606,7 +1710,18 @@ function renderPicker(){
   } else {
     const base = cat ? productosDeRuta(sub ? cat.id + '/' + sub.id : cat.id) : PRODUCTS;
     const todos = pk.q ? buscarEnCatalogo(pk.q, base) : base.slice();
-    const lista = cat ? todos : todos.slice(0, PK_MAX_GLOBAL);
+    let lista = cat ? todos : todos.slice(0, PK_MAX_GLOBAL);
+    if (cat && !pk.q){
+      // en una categoría que tiene accesorios, primero los equipos y aparte los accesorios y transductores
+      const nAcc = todos.filter(esAccesorio).length, nEq = todos.length - nAcc;
+      if (nAcc && nEq){
+        const verAcc = pk.vista === 'acc';
+        lista = todos.filter(p => esAccesorio(p) === verAcc);
+        html += '<div class="pk-chips">' +
+          '<button type="button" class="pk-chip' + (verAcc ? '' : ' on') + '" data-vista="equipos">Equipos <b>' + nEq + '</b></button>' +
+          '<button type="button" class="pk-chip' + (verAcc ? ' on' : '') + '" data-vista="acc">Accesorios y transductores <b>' + nAcc + '</b></button></div>';
+      }
+    }
     pk.lista = lista;
     if (!lista.length){
       html += cat
@@ -1648,22 +1763,34 @@ function elegirProducto(p){
     return;
   }
   if (pk.preg){ pk.preg = null; const c = document.getElementById('pkPreg'); if (c) c.remove(); }
+  intentarAgregar(p);
+}
+// Agrega el producto; si trae una advertencia (y aún no va en la cotización) primero se pide confirmar.
+function intentarAgregar(p){
+  const yaVa = state.items.some(it => claveNorm(it.clave) === claveNorm(p.clave));
+  if (!yaVa && avisoDe(p.clave)){
+    pk.aviso = p; pk.preg = null;
+    renderPicker();
+    $pk('pkBody').scrollTop = 0;
+    return;
+  }
   agregarDeCatalogo(p);
   actualizarInsignias();
 }
 
 function subirNivel(){
-  if (pk.preg) pk.preg = null;
+  if (pk.aviso) pk.aviso = null;
+  else if (pk.preg) pk.preg = null;
   else if (pk.q){ pk.q = ''; $pk('pkSearch').value = ''; }
-  else if (pk.sub || pk.todo){ pk.sub = null; pk.todo = false; }
-  else if (pk.cat) pk.cat = null;
+  else if (pk.sub || pk.todo){ pk.sub = null; pk.todo = false; pk.vista = 'equipos'; }
+  else if (pk.cat){ pk.cat = null; pk.vista = 'equipos'; }
   renderPicker();
   $pk('pkBody').scrollTop = 0;
 }
 
 function abrirPicker(){
   if (pk.abierto) return;
-  Object.assign(pk, {abierto: true, cat: null, sub: null, todo: false, q: '', preg: null});
+  Object.assign(pk, {abierto: true, cat: null, sub: null, todo: false, q: '', preg: null, aviso: null, vista: 'equipos'});
   $pk('picker').classList.add('open');
   $pk('picker').setAttribute('aria-hidden', 'false');
   document.documentElement.classList.add('pk-open');
@@ -1690,12 +1817,12 @@ function cerrarYVerCotizacion(){
 
 window.addEventListener('popstate', ()=>{
   if (!pk.abierto) return;
-  if (pk.preg || pk.sub || pk.todo || pk.cat || pk.q){ subirNivel(); try{ history.pushState({picker: 1}, ''); }catch(e){} }   // "atrás" sube un nivel
+  if (pkTieneNivel()){ subirNivel(); try{ history.pushState({picker: 1}, ''); }catch(e){} }   // "atrás" sube un nivel
   else { pkHist = false; cerrarPicker(true); }
 });
 document.addEventListener('keydown', (e)=>{
   if (!pk.abierto) return;
-  if (e.key === 'Escape'){ e.preventDefault(); if (pk.preg || pk.sub || pk.todo || pk.cat || pk.q) subirNivel(); else cerrarPicker(); }
+  if (e.key === 'Escape'){ e.preventDefault(); if (pkTieneNivel()) subirNivel(); else cerrarPicker(); }
 });
 
 $pk('btnAbrirPicker').addEventListener('click', abrirPicker);
@@ -1709,7 +1836,7 @@ $pk('pkSearch').addEventListener('input', ()=>{
   clearTimeout(pkTimer);
   pkTimer = setTimeout(()=>{
     pk.q = $pk('pkSearch').value.trim();
-    pk.preg = null;
+    pk.preg = null; pk.aviso = null;
     renderPicker();
     $pk('pkBody').scrollTop = 0;
   }, 90);
@@ -1719,34 +1846,42 @@ $pk('pkSearch').addEventListener('keydown', (e)=>{
   e.preventDefault();
   clearTimeout(pkTimer);
   pk.q = $pk('pkSearch').value.trim();
-  pk.preg = null;
+  pk.preg = null; pk.aviso = null;
   renderPicker();
   if (pkEsToque()){ $pk('pkSearch').blur(); return; }   // en el teléfono "Buscar" solo cierra el teclado
-  if (pk.q && pk.lista.length) elegirProducto(pk.lista[0]);   // en la computadora Enter agrega el primer resultado
+  if (pk.q && pk.lista.length && !preguntaPorBusqueda(pk.q)) elegirProducto(pk.lista[0]);   // en la computadora Enter agrega el primer resultado (si hay pregunta de versión, primero se contesta)
 });
 
 // Un solo manejador para todo lo que se toca dentro de la ventana
 $pk('pkBody').addEventListener('click', (e)=>{
-  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-global],[data-pk-libre]');
+  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-aviso-ok],[data-vista],[data-pk-global],[data-pk-libre]');
   if (!t) return;
   if (t.dataset.op !== undefined){
     const o = pk.ops[Number(t.dataset.op)];
     if (!o) return;
     pk.preg = null; pk.q = ''; $pk('pkSearch').value = '';
-    agregarDeCatalogo(o.p);
+    intentarAgregar(o.p);
     renderPicker();
     return;
   }
-  if (t.dataset.pkCancel){ pk.preg = null; renderPicker(); return; }
+  if (t.dataset.pkAvisoOk){
+    const p = pk.aviso;
+    pk.aviso = null; pk.preg = null;
+    if (p) agregarDeCatalogo(p);
+    renderPicker();
+    return;
+  }
+  if (t.dataset.vista){ pk.vista = t.dataset.vista; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.pkCancel){ pk.preg = null; pk.aviso = null; renderPicker(); return; }
   if (t.dataset.pkGlobal){ pk.cat = null; pk.sub = null; pk.todo = false; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.dataset.pkLibre){
     addItem({marca:'', clave:'', desc:'Descripción del producto', pp:0, pd:0, cantidad:1});
     cerrarYVerCotizacion();
     return;
   }
-  if (t.dataset.cat){ pk.cat = t.dataset.cat; pk.sub = null; pk.todo = false; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
-  if (t.dataset.sub){ pk.sub = t.dataset.sub; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
-  if (t.dataset.todo){ pk.todo = true; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.cat){ pk.cat = t.dataset.cat; pk.sub = null; pk.todo = false; pk.vista = 'equipos'; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.sub){ pk.sub = t.dataset.sub; pk.vista = 'equipos'; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.todo){ pk.todo = true; pk.vista = 'equipos'; pk.q = ''; $pk('pkSearch').value = ''; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.classList.contains('pk-item')){
     const p = buscarPrecios(t.dataset.clave);
     if (p) elegirProducto(p);
@@ -1800,44 +1935,56 @@ function agregarDeCatalogo(p){
   mostrarAviso('✓ ' + p.clave + ' agregado a la cotización' + (p.cot ? ' · captura el precio cotizado' : ''));
 }
 
+// Cambia el equipo de la cotización por su kit (conserva la cantidad). Si el kit ya iba en la cotización, se suman las piezas.
+function cambiarPorKit(baseClave, kitClave){
+  const kit = buscarPrecios(kitClave);
+  const base = state.items.find(it => claveNorm(it.clave) === claveNorm(baseClave));
+  if (!kit || !base) return;
+  const yaKit = state.items.find(it => it !== base && claveNorm(it.clave) === claveNorm(kit.clave));
+  if (yaKit){
+    yaKit.cantidad = (Number(yaKit.cantidad) || 1) + (Number(base.cantidad) || 1);
+    state.items = state.items.filter(it => it !== base);
+    lastAddedId = yaKit.id;
+  } else {
+    Object.assign(base, {marca: kit.marca, clave: kit.clave, desc: kit.desc, pp: kit.pp, pd: kit.pd, cot: kit.cot ? true : undefined});
+    lastAddedId = base.id;
+  }
+  renderItemsEditor();
+  render();
+  mostrarAviso('✓ Cambiado por el kit ' + kit.clave);
+}
+
 // Arma la pregunta (texto + botones con clave y precio). Regresa null si ninguna opción está en el catálogo.
+// Una opción marcada "proximamente" que aún no está en el catálogo se muestra apagada.
 function armarPregunta(preg){
-  const ops = (preg.opciones || []).map(o => ({o, p: buscarPrecios(o.clave)})).filter(x => x.p);
+  const todas = (preg.opciones || []).map(o => ({o, p: buscarPrecios(o.clave)}));
+  const ops = todas.filter(x => x.p);
   if (!ops.length) return null;
-  const html = `
-    <div class="preg-title">${esc(preg.texto)}</div>
-    <div class="preg-opts">
-      ${ops.map((x,i)=>`
-        <button type="button" class="preg-opt" data-op="${i}">
+  const botones = todas.map(x => {
+    if (x.p) return `
+        <button type="button" class="preg-opt" data-op="${ops.indexOf(x)}">
           <b>${esc(x.o.etiqueta)}</b>
           <span>${esc(x.p.clave)} · ${precioResultado(x.p)}</span>
-        </button>`).join('')}
+        </button>`;
+    if (x.o.proximamente) return `
+        <button type="button" class="preg-opt preg-prox" disabled>
+          <b>${esc(x.o.etiqueta)}</b>
+          <span>¡Próximamente!</span>
+        </button>`;
+    return '';
+  }).join('');
+  const html = `
+    <div class="preg-title">${esc(preg.texto)}</div>
+    <div class="preg-opts">${botones}
     </div>`;
   return {ops, html};
 }
-// Panel "Complementos sugeridos": uno por cada producto de la cotización que tenga sugerencias.
-function renderComplementos(){
-  const box = document.getElementById('compBox');
-  if (!box) return;
-  const enCot = new Set(state.items.map(it => claveNorm(it.clave)));
-  const grupos = [], vistos = new Set();
-  state.items.forEach(it=>{
-    const k = claveNorm(it.clave);
-    if (!k || vistos.has(k) || !COMP_MAP[k]) return;
-    vistos.add(k);
-    const filas = COMP_MAP[k].map(c => buscarPrecios(c)).filter(p => p && !enCot.has(claveNorm(p.clave)));
-    if (filas.length) grupos.push({base: it.clave, filas});
-  });
-  if (!grupos.length){ box.innerHTML = ''; return; }
-  box.innerHTML = grupos.map(g=>`
-    <div class="comp-group">
-      <div class="comp-head">
-        <div class="comp-title">💡 Complementos sugeridos para ${esc(g.base)}</div>
-        <div class="comp-sub">${g.filas.length} disponible${g.filas.length === 1 ? '' : 's'}</div>
-      </div>
-      ${g.filas.map(p=>{
-        const precio = state.tipoPrecio === 'PD' ? p.pd : p.pp;
-        return `
+
+// Estado de las secciones desplegables del panel (se conserva aunque el panel se vuelva a dibujar)
+const COMP_ABIERTO = {};
+function filaComplemento(p, boton){
+  const precio = state.tipoPrecio === 'PD' ? p.pd : p.pp;
+  return `
       <div class="comp-row">
         <img class="comp-thumb" src="${imgFor(p.clave)}" alt="">
         <div class="comp-info">
@@ -1845,15 +1992,71 @@ function renderComplementos(){
           <div class="comp-desc">${esc(p.desc)}</div>
           <div class="comp-price">${precioResultado(p)}</div>
         </div>
-        <button type="button" class="comp-add" data-comp="${esc(p.clave)}" ${precio > 0 ? '' : 'disabled'}>+ Agregar</button>
+        ${boton || `<button type="button" class="comp-add" data-comp="${esc(p.clave)}" ${precio > 0 ? '' : 'disabled'}>+ Agregar</button>`}
       </div>`;
+}
+// Panel "Complementos sugeridos": uno por cada producto de la cotización que tenga sugerencias.
+function renderComplementos(){
+  const box = document.getElementById('compBox');
+  if (!box) return;
+  const enCot = new Set(state.items.map(it => claveNorm(it.clave)));
+  const sinCot = lista => (lista || []).map(c => buscarPrecios(c)).filter(p => p && !enCot.has(claveNorm(p.clave)));
+  const grupos = [], vistos = new Set();
+  state.items.forEach(it=>{
+    const k = claveNorm(it.clave);
+    if (!k || vistos.has(k)) return;
+    vistos.add(k);
+    const regla = reglaDe(k);
+    const planas = sinCot(COMP_MAP[k]);
+    if (!regla && !planas.length) return;
+    const g = {base: it.clave, aviso: '', kit: null, secciones: [], planas};
+    if (regla){
+      g.aviso = regla.aviso || '';
+      const kitP = regla.kit ? buscarPrecios(regla.kit) : null;
+      if (kitP && !enCot.has(claveNorm(kitP.clave))) g.kit = kitP;
+      [['trans', 'Transductores', regla.transductores, true], ['acc', 'Accesorios', regla.accesorios, false]].forEach(([id, titulo, lista, abierta])=>{
+        const filas = sinCot(lista);
+        if (filas.length) g.secciones.push({id, titulo, filas, abierta});
+      });
+    }
+    const n = g.planas.length + g.secciones.reduce((s, x) => s + x.filas.length, 0);
+    if (n || g.kit || g.aviso) grupos.push(Object.assign(g, {n}));
+  });
+  if (!grupos.length){ box.innerHTML = ''; return; }
+  box.innerHTML = grupos.map(g=>`
+    <div class="comp-group">
+      <div class="comp-head">
+        <div class="comp-title">💡 Complementos sugeridos para ${esc(g.base)}</div>
+        ${g.n ? `<div class="comp-sub">${g.n} disponible${g.n === 1 ? '' : 's'}</div>` : ''}
+      </div>
+      ${g.aviso ? `<div class="comp-aviso">⚠️ ${esc(g.aviso)}</div>` : ''}
+      ${g.kit ? `
+      <div class="comp-kit">
+        <div class="comp-kit-lbl">Kit sugerido</div>
+        ${filaComplemento(g.kit, `<button type="button" class="comp-add comp-swap" data-kit="${esc(g.kit.clave)}" data-base="${esc(g.base)}" ${(state.tipoPrecio === 'PD' ? g.kit.pd : g.kit.pp) > 0 ? '' : 'disabled'}>Cambiar por el kit</button>`)}
+      </div>` : ''}
+      ${g.secciones.map(s=>{
+        const key = claveNorm(g.base) + '|' + s.id;
+        const abierta = key in COMP_ABIERTO ? COMP_ABIERTO[key] : s.abierta;
+        return `
+      <details class="comp-sec" data-key="${esc(key)}" ${abierta ? 'open' : ''}>
+        <summary>${s.titulo} <span class="comp-n">${s.filas.length}</span></summary>
+        ${s.filas.map(p => filaComplemento(p)).join('')}
+      </details>`;
       }).join('')}
+      ${g.planas.map(p => filaComplemento(p)).join('')}
     </div>`).join('');
   box.querySelectorAll('[data-comp]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const p = buscarPrecios(btn.dataset.comp);
       if (p) agregarDeCatalogo(p);
     });
+  });
+  box.querySelectorAll('[data-kit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> cambiarPorKit(btn.dataset.base, btn.dataset.kit));
+  });
+  box.querySelectorAll('details.comp-sec').forEach(d=>{
+    d.addEventListener('toggle', ()=>{ COMP_ABIERTO[d.dataset.key] = d.open; });
   });
 }
 function removeItem(id){
