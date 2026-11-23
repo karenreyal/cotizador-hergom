@@ -1,12 +1,12 @@
 {
-  "revisado": "2026-11-23T17:21:21Z",
+  "revisado": "2026-11-23T18:57:37Z",
   "resultado": "ok",
   "mensaje": "",
   "fuenteModificado": "2026-11-20T17:26:12Z",
   "fuente": "LISTA VET.xlsx",
   "productos": 226,
   "cambios": {
-    "nuevos": 5,
+    "nuevos": 0,
     "quitados": 0,
     "precios": 0,
     "textos": 0
@@ -18,5 +18,5 @@
     "Clave repetida con precios distintos (se usa la primera): P8-2S",
     "Precio público de V-3CFL30V tomado de tools/excepciones.json: la celda de la lista no trae número"
   ],
-  "verificacion": "Lectura directa del conector, sin fila TOTAL en la hoja (filas completas: 340 de 340)"
+  "verificacion": "Copia manual sin fila TOTAL, idéntica a lo ya publicado (filas completas: filas completas: 340 de 340)"
 }
