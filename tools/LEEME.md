@@ -3,7 +3,7 @@
 El cotizador (`index.html`) abre primero `catalogo.json` y `estado.json`, que viven junto a la página.
 Un robot (tarea programada de Claude, ver `PROMPT_ROBOT.md`) los mantiene al día. Corre una vez al día, de lunes a sábado a las 6:47 p.m. (hora de Ciudad de México), después de que se actualiza la lista:
 
-1. Lee `LISTA VET.xlsx` (OneDrive de ventasvet, https://byhergom-my.sharepoint.com/personal/ventasvet_byhergom_com/Documents/LISTA VET.xlsx)
+1. Lee `LISTA VET (conectada).xlsx` (OneDrive de ventasvet; desde el 2026-11-23, antes leía `LISTA VET.xlsx`, que ya no se actualiza)
    con el conector de Microsoft 365 de la cuenta de Karen (no se usa Power Automate, ni Azure, ni nada que requiera permisos de TI).
    No se fía de la fecha de modificación que da el buscador de SharePoint, porque puede ir horas atrasada: siempre lee el archivo.
 2. Compara contra lo ya publicado. Si no hay diferencias, no vuelve a publicar la lista y solo actualiza `estado.json` (la fecha de la última revisión).
@@ -23,7 +23,8 @@ Si la hoja ya no trae las columnas de categoría o notas, el script conserva las
 ## Por qué LISTA VET y no la lista maestra
 El conector de Microsoft 365 solo lee archivos de hasta 100 MB. La lista maestra (`Lista Precios Hergom Vet - 2026.xlsx`, sitio kelly) pesa
 más de 127 MB por las imágenes y el conector no la puede abrir; comprimir las imágenes no la bajó de peso.
-`LISTA VET.xlsx` es una copia ligera, sin imágenes, solo con las columnas CLAVE, DESCRIPCIÓN, MARCA, CATEGORÍA, SUB CATEGORÍA, NOTAS, PD y PP.
+`LISTA VET (conectada).xlsx` es una copia ligera, sin imágenes, con una sola hoja de datos y las columnas CLAVE, DESCRIPCIÓN, MARCA, PD y PP (la categoría y las notas ya publicadas se conservan; si la hoja vuelve a traer esas columnas, se usan).
+Los precios pueden venir sin formato de moneda y con coma decimal (`1574213,103`); el script los entiende. Si un precio cambia 10 veces o más frente a lo publicado, el script no publica y lo reporta como error (casi seguro es un error de lectura de números).
 El robot solo es tan fresco como esa lista: si nadie la actualiza, el resultado es "sin cambios".
 Si algún día LISTA VET pasara de 100 MB, el robot lo reporta en `estado.json` y la página lo muestra.
 

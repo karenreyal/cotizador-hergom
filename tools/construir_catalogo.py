@@ -56,7 +56,10 @@ def norm(s):
 
 
 def parse_dinero(s):
-    """'$1.574.213,10' -> 1574213.10 ; '$517,24' -> 517.24 ; '1,574,213.10' -> 1574213.10 ; vacío -> None."""
+    """'$1.574.213,10' -> 1574213.10 ; '$517,24' -> 517.24 ; '1,574,213.10' -> 1574213.10 ; '1574213,103' -> 1574213.103 ; vacío -> None.
+
+    Un solo separador seguido de exactamente 3 dígitos es de miles ('1,574' -> 1574) solo si lo que está antes mide de 1 a 3 dígitos
+    y no es cero; si no ('1574213,103', '17241,376', '0,500') es decimal. Las listas sin formato de moneda traen números así."""
     t = str(s or '').strip()
     if not t:
         return None
@@ -71,8 +74,12 @@ def parse_dinero(s):
     elif pd >= 0 or pc >= 0:
         sep = '.' if pd >= 0 else ','
         partes = t.split(sep)
-        # varios separadores iguales, o 3 dígitos tras el único separador => miles
-        dec = sep if (len(partes) == 2 and len(partes[1]) != 3) else None
+        # varios separadores iguales => miles; un solo separador con 3 dígitos después => miles solo si antes hay 1 a 3 dígitos (no cero)
+        if len(partes) == 2:
+            miles = len(partes[1]) == 3 and 1 <= len(partes[0]) <= 3 and partes[0].strip('0') != ''
+            dec = None if miles else sep
+        else:
+            dec = None
     else:
         dec = None
     if dec:
@@ -282,6 +289,26 @@ def verificar_total(chk, directo=False, filas=(None, '')):
     return True, 'Total verificado'
 
 
+SALTO_SOSPECHOSO = 10  # un precio que se multiplica o divide por 10 o más casi seguro es un error de lectura, no un cambio de precio
+
+
+def saltos_sospechosos(previo, productos):
+    """Claves cuyo precio cambió 10 veces o más frente a lo publicado (por ejemplo 17241.38 -> 17241376 por leer mal 17241,376)."""
+    if not previo:
+        return []
+    ant = {p['clave'].upper(): p for p in previo.get('productos', [])}
+    malos = []
+    for p in productos:
+        q = ant.get(p['clave'].upper())
+        if not q:
+            continue
+        for campo in ('pp', 'pd'):
+            a, n = q.get(campo, 0), p.get(campo, 0)
+            if a and n and (n >= a * SALTO_SOSPECHOSO or n <= a / SALTO_SOSPECHOSO):
+                malos.append('%s %s %s -> %s' % (p['clave'], campo, a, n))
+    return malos
+
+
 def comparar(previo, productos):
     """Diferencias entre lo ya publicado y la lista nueva. Devuelve (cambios, detalle)."""
     cambios = {'nuevos': 0, 'quitados': 0, 'precios': 0, 'textos': 0}
@@ -405,6 +432,9 @@ def cmd_construir(a):
                 msg_total = ('La hoja no trae fila TOTAL y hay %d diferencias frente a lo publicado (más de %d), demasiadas para revisarlas una por una. '
                              'Agrega una fila TOTAL a la lista (suma de PD y PP).' % (n_dif, MAX_DIF_SIN_TOTAL))
         problemas = []
+        saltos = saltos_sospechosos(previo, productos)
+        if saltos:
+            problemas.append('Precios que cambian %d veces o más (probable error al leer los números): %s.' % (SALTO_SOSPECHOSO, '; '.join(saltos[:5])))
         if len(productos) < MIN_PRODUCTOS:
             problemas.append('Solo %d productos (se esperaban al menos %d).' % (len(productos), MIN_PRODUCTOS))
         if n_prev and len(productos) < n_prev * MIN_FRACCION_PREVIA:
