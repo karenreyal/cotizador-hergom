@@ -935,7 +935,8 @@ let itemSeq = 0;
 
 // COMPLEMENTOS (lista simple): cuando una de estas claves está en la cotización, se sugieren las claves de su lista.
 // Hoy está vacía: Rayos X pasó a REGLAS_EQUIPO con los accesorios que mandó Karen (2026-11-24); las sugerencias planas anteriores
-// (generador <-> flat panel, bases DRX para el VETIGEN-P50) se quitaron para no duplicar ni sugerir piezas que no son de ese equipo.
+// (bases DRX para el VETIGEN-P50, etc.) se quitaron para no duplicar ni sugerir piezas que no son de ese equipo. La sugerencia
+// generador <-> flat panel se conservó (Karen la confirmó) como sección de cada regla.
 const COMPLEMENTOS = {
 };
 
@@ -986,6 +987,11 @@ const ACC_MON_IBP = ACC_MON.concat(['VETA4AV', '6800-30-50876', '115-043023-00',
 // --- Rayos X portátiles: accesorios de cada generador y de los flat panel ---
 const ACC_DRX  = ['BXJJ-X004', 'BX-005', 'DRXTR1'];
 const ACC_FLAT = ['CS-06', 'DRXTR2', 'VETIPADBOX'];
+// Generadores y flat panel se sugieren entre sí (Karen, 2026-11-24 14:35): cada generador ofrece los 3 flat panel y cada flat panel los 4 generadores.
+const GENERADORES = ['VETIGEN-P50', 'DRX3', 'DRX3.2', 'BEATLE-06P1H'];
+const FLAT_PANELS = ['VETIPADPLUSV', 'VETIPADC1V', '4336WC'];
+const SUG_FLAT = {id: 'cruz', titulo: 'Flat panel', claves: FLAT_PANELS};
+const SUG_GEN  = {id: 'cruz', titulo: 'Generadores', claves: GENERADORES};
 const REGLAS_EQUIPO = {
   // --- Ultrasonidos portátiles ---
   'VETUSE3':    {transductores: ['6C2MV', 'L12-3MV', '6LE5VMV', 'C5-2M'],
@@ -1091,13 +1097,14 @@ const REGLAS_EQUIPO = {
 
   // --- Rayos X ---
   // VETIXS380 (sala) ya incluye generador, flat panel, mesa y estación de trabajo: no lleva sugerencias.
-  'VETIGEN-P50':    {accesorios: ['VETIGENTR']},
-  'DRX3':           {accesorios: ACC_DRX},
-  'DRX3.2':         {accesorios: ACC_DRX},
-  'BEATLE-06P1H':   {accesorios: ['MS-06P', 'MS-05P']},
-  'VETIPADPLUSV':   {accesorios: ACC_FLAT},
-  'VETIPADC1V':     {accesorios: ACC_FLAT},
-  '4336WC':         {accesorios: ACC_FLAT}
+  // Cada generador sugiere sus accesorios y los flat panel; cada flat panel sugiere sus accesorios y los generadores.
+  'VETIGEN-P50':    {accesorios: ['VETIGENTR'],        secciones: [SUG_FLAT]},
+  'DRX3':           {accesorios: ACC_DRX,              secciones: [SUG_FLAT]},
+  'DRX3.2':         {accesorios: ACC_DRX,              secciones: [SUG_FLAT]},
+  'BEATLE-06P1H':   {accesorios: ['MS-06P', 'MS-05P'], secciones: [SUG_FLAT]},
+  'VETIPADPLUSV':   {accesorios: ACC_FLAT,             secciones: [SUG_GEN]},
+  'VETIPADC1V':     {accesorios: ACC_FLAT,             secciones: [SUG_GEN]},
+  '4336WC':         {accesorios: ACC_FLAT,             secciones: [SUG_GEN]}
 };
 
 // PREGUNTAS_VERSION: preguntas que se hacen ANTES de agregar el equipo.
@@ -1835,7 +1842,8 @@ const CATEGORIAS_PRODUCTO = {
 const PREGUNTAS_LISTA = {
   'rayosx/portatiles': {texto: '¿Generadores o flat panel?', opciones: [
     {etiqueta: 'Generadores', claves: ['VETIGEN-P50', 'DRX3', 'DRX3.2', 'BEATLE-06P1H']},
-    {etiqueta: 'Flat panel',  claves: ['VETIPADPLUSV', 'VETIPADC1V', '4336WC']}
+    {etiqueta: 'Flat panel',  claves: ['VETIPADPLUSV', 'VETIPADC1V', '4336WC']},
+    {etiqueta: 'Accesorios',  claves: ['VETIGENTR', 'BXJJ-X004', 'BX-005', 'DRXTR1', 'MS-06P', 'MS-05P', 'CS-06', 'DRXTR2', 'VETIPADBOX']}
   ]},
   'lamparas/techo': {texto: '¿De 1 o 2 satélites?', opciones: [
     {etiqueta: 'De 1 satélite',   claves: ['HYLED180WVET', 'HYLED180VET', 'VELEDE5T', 'VELEDS5T']},
