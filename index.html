@@ -486,6 +486,13 @@
     .preview-toolbar{flex-wrap:wrap;}
   }
 
+  /* sugerencias de otras categorías (subir el ticket) */
+  .sug-cat{border-color:#7cc59a; background:#f1faf4;}
+  .sug-cat .preg-opt{border-color:#2f8f57;}
+  .sug-cat .preg-opt span{color:#2f8f57; font-weight:700;}
+  .pk-comp .sug-cat{margin-top:16px;}
+  #catSugBox .sug-cat{margin-top:12px;}
+
   @media print{
     @page{ size: letter portrait; margin: 8mm; }
     *{
@@ -665,6 +672,7 @@
       <div id="itemsList" class="items-list"></div>
       <button type="button" class="btn-secondary" id="btnAbrirPicker2" style="display:none;">＋ Agregar otro producto</button>
       <div id="compBox" class="comp-box"></div>
+      <div id="catSugBox" class="comp-box"></div>
       <div class="total-line">
         <span id="editorTotalLabel">Total</span>
         <span class="amt" id="editorTotal">$0.00</span>
@@ -992,6 +1000,17 @@ const GENERADORES = ['VETIGEN-P50', 'DRX3', 'DRX3.2', 'BEATLE-06P1H'];
 const FLAT_PANELS = ['VETIPADPLUSV', 'VETIPADC1V', '4336WC'];
 const SUG_FLAT = {id: 'cruz', titulo: 'Flat panel', claves: FLAT_PANELS};
 const SUG_GEN  = {id: 'cruz', titulo: 'Generadores', claves: GENERADORES};
+// SUG_CATEGORIAS: sugerencias para subir el ticket (Karen, 2026-11-24 14:51). Si la cotización lleva un EQUIPO de la categoría (clave), se sugiere cotizar
+// las categorías de su lista (rutas del selector). Una categoría que la cotización ya lleva (por un equipo, no por accesorios) no se sugiere.
+// Para Inmunoensayo Karen escribió "hematología, inmuno y orina": la segunda es Química (inmuno sería ella misma).
+const SUG_CATEGORIAS = {
+  'tomografia':              ['anestesia'],
+  'anestesia':               ['monitores'],
+  'laboratorio/quimica':     ['laboratorio/hematologia', 'laboratorio/inmuno', 'laboratorio/orina'],
+  'laboratorio/hematologia': ['laboratorio/quimica', 'laboratorio/inmuno', 'laboratorio/orina'],
+  'laboratorio/inmuno':      ['laboratorio/hematologia', 'laboratorio/quimica', 'laboratorio/orina'],
+  'laboratorio/orina':       ['laboratorio/quimica', 'laboratorio/inmuno', 'laboratorio/hematologia']
+};
 const REGLAS_EQUIPO = {
   // --- Ultrasonidos portátiles ---
   'VETUSE3':    {transductores: ['6C2MV', 'L12-3MV', '6LE5VMV', 'C5-2M'],
@@ -1952,6 +1971,15 @@ function pintarPregunta(preg, conCancelar){
     (conCancelar ? '<div class="manual-add"><button type="button" class="link-btn" data-pk-cancel="1">Cancelar</button></div>' : '') + '</div>';
 }
 
+// Abre el selector directo en una categoría o subcategoría ("laboratorio/hematologia", "anestesia").
+function irACategoriaPicker(ruta){
+  const [c, s] = ruta.split('/');
+  if (!pk.abierto) abrirPicker();
+  Object.assign(pk, {cat: c, sub: s || null, todo: false, filtro: null, sinFam: false, vista: 'equipos', q: '', comp: null, compExtras: [], preg: null, pila: [], aviso: null, avisoExtras: []});
+  $pk('pkSearch').value = '';
+  renderPicker();
+  $pk('pkBody').scrollTop = 0;
+}
 // Pantalla que sale justo después de agregar un equipo: kit sugerido y, abajo, transductores y accesorios con su botón "+ Agregar".
 function pintarComp(){
   const g = grupoComplementos(pk.comp);
@@ -1962,7 +1990,9 @@ function pintarComp(){
   if (g) h += bloqueKits(g);
   if (g) g.secciones.forEach(s => { h += '<div class="comp-h">' + s.titulo + ' <span class="comp-n">' + s.filas.length + '</span></div>' + (s.aviso ? '<div class="comp-aviso">⚠️ ' + esc(s.aviso) + '</div>' : '') + '<div class="comp-card">' + filasSeccionHtml(s, g) + '</div>'; });
   if (g && g.planas.length) h += '<div class="comp-h">Complementos sugeridos <span class="comp-n">' + g.planas.length + '</span></div>' + fila(g.planas);
-  if (!g || !(g.n || g.kits.length)) h += '<div class="pk-vacio">Ya agregaste todo lo sugerido para este equipo.</div>';
+  const sugCat = sugerenciasDe(buscarPrecios(pk.comp));
+  if ((!g || !(g.n || g.kits.length)) && !sugCat.length) h += '<div class="pk-vacio">Ya agregaste todo lo sugerido para este equipo.</div>';
+  if (sugCat.length) h += htmlSugCategorias(sugCat);
   return h + '<button type="button" class="btn-secondary pk-seguir" data-pk-seguir="1">Listo · seguir agregando productos</button></div>';
 }
 // Agrega desde la ventana; si es un equipo nuevo en la cotización y tiene sugerencias, se muestra la pantalla de complementos.
@@ -1971,7 +2001,7 @@ function agregarEnPicker(p, extras){
   agregarDeCatalogo(p);
   (extras || []).forEach(x => agregarDeCatalogo(x));   // piezas que se agregan junto con el equipo (por ejemplo el carrito)
   const g = yaVa ? null : grupoComplementos(p.clave);
-  if (g && (g.n || g.kits.length)){
+  if ((g && (g.n || g.kits.length)) || (!yaVa && sugerenciasDe(p).length)){   // también sale la pantalla si hay otras categorías que sugerir
     pk.comp = p.clave; pk.compExtras = (extras || []).map(x => x.clave); pk.preg = null; pk.aviso = null;
     renderPicker();
     $pk('pkBody').scrollTop = 0;
@@ -2257,7 +2287,7 @@ $pk('pkSearch').addEventListener('keydown', (e)=>{
 
 // Un solo manejador para todo lo que se toca dentro de la ventana
 $pk('pkBody').addEventListener('click', (e)=>{
-  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-aviso-ok],[data-pk-sust],[data-vista],[data-fam],[data-sinfam],[data-comp],[data-kit],[data-pk-seguir],[data-pk-global],[data-pk-libre],[data-filtro],[data-filtro-quitar]');
+  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-aviso-ok],[data-pk-sust],[data-vista],[data-fam],[data-sinfam],[data-comp],[data-kit],[data-pk-seguir],[data-sug-cat],[data-pk-global],[data-pk-libre],[data-filtro],[data-filtro-quitar]');
   if (!t) return;
   if (t.dataset.op !== undefined){
     const o = pk.ops[Number(t.dataset.op)];
@@ -2303,6 +2333,7 @@ $pk('pkBody').addEventListener('click', (e)=>{
   }
   if (t.dataset.filtro !== undefined){ pk.filtro = Number(t.dataset.filtro); renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.dataset.filtroQuitar){ pk.filtro = null; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
+  if (t.dataset.sugCat){ irACategoriaPicker(t.dataset.sugCat); return; }
   if (t.dataset.pkSeguir){ pk.comp = null; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
   if (t.dataset.fam){ elegirFamilia(t.dataset.fam); return; }
   if (t.dataset.sinfam){ pk.sinFam = true; pk.vista = 'acc'; renderPicker(); $pk('pkBody').scrollTop = 0; return; }
@@ -2495,8 +2526,57 @@ function bloqueKits(g){
         ${g.kits.map(k => filaComplemento(k, botonKit(g, k))).join('')}
       </div>`;
 }
+// ---------- Sugerencias de otras categorías (para subir el ticket) ----------
+// Categorías (rutas) de un producto cuando es EQUIPO de esa categoría, no su accesorio ni consumible.
+function rutasEquipo(p){
+  const acc = ES_ACCESORIO[claveNorm(p.clave)] || [];
+  return rutasDe(p).filter(r => acc.indexOf(r) < 0);
+}
+const enRuta = (r, ruta) => r === ruta || r.indexOf(ruta + '/') === 0;
+// Categorías que la cotización ya lleva (por sus equipos).
+function rutasEnCotizacion(){
+  const rs = [];
+  state.items.forEach(it => {
+    const p = buscarPrecios(it.clave);
+    if (p) rutasEquipo(p).forEach(r => { if (rs.indexOf(r) < 0) rs.push(r); });
+  });
+  return rs;
+}
+// Qué categorías sugerir para unas rutas dadas: las de SUG_CATEGORIAS, sin repetir y sin las que la cotización ya lleva.
+function sugerenciasPara(rutas){
+  const cubiertas = rutasEnCotizacion(), out = [];
+  Object.keys(SUG_CATEGORIAS).forEach(k => {
+    if (!rutas.some(r => enRuta(r, k))) return;
+    SUG_CATEGORIAS[k].forEach(t => { if (out.indexOf(t) < 0 && !cubiertas.some(r => enRuta(r, t))) out.push(t); });
+  });
+  return out;
+}
+const sugerenciasDe = p => (p ? sugerenciasPara(rutasEquipo(p)) : []);
+// Nombre con que se muestra una categoría sugerida: la subcategoría si la tiene (Hematología) o la categoría (Monitores).
+function etiquetaRuta(r){
+  const [c, s] = r.split('/');
+  const cat = CATEGORIAS.find(x => x.id === c);
+  if (!cat) return r;
+  const sub = s && cat.subs ? cat.subs.find(x => x.id === s) : null;
+  return sub ? sub.n : cat.n;
+}
+function htmlSugCategorias(rutas){
+  return '<div class="preg-card sug-cat"><div class="preg-title">💡 Sugerencia: cotiza también</div><div class="preg-opts">' +
+    rutas.map(r => '<button type="button" class="preg-opt" data-sug-cat="' + esc(r) + '"><b>' + esc(etiquetaRuta(r)) + '</b><span>Cotizar ›</span></button>').join('') +
+    '</div></div>';
+}
+// Panel bajo las partidas (solo en el editor): las categorías que conviene ofrecer según lo que ya lleva la cotización.
+function renderSugCategorias(){
+  const box = document.getElementById('catSugBox');
+  if (!box) return;
+  const rs = state.items.length ? sugerenciasPara(rutasEnCotizacion()) : [];
+  box.innerHTML = rs.length ? htmlSugCategorias(rs) : '';
+  box.querySelectorAll('[data-sug-cat]').forEach(b => b.addEventListener('click', () => irACategoriaPicker(b.dataset.sugCat)));
+}
+
 // Panel "Complementos sugeridos": uno por cada producto de la cotización que tenga sugerencias.
 function renderComplementos(){
+  renderSugCategorias();
   const box = document.getElementById('compBox');
   if (!box) return;
   const grupos = [], vistos = new Set();
