@@ -957,6 +957,10 @@ const ACC_VETA3X_SELECTA = ['VETA3XBAIN', '115-00967A-00', '115-00966A-00', '033
 const ACC_VETA5 = ['115-00165A-00', '115-076054-00', '033-001251-00', 'VETA3XBAIN', 'VETAGUARD', '040-00043A-00', '6800-30-50876', 'VETA4AV',
                     '040-00034A-00', '040-00033A-00', '040-00032A-00', '040-00024A-00', 'KIT-BR-VET', '040-00042A-00', '040-001703-00'];
 const ACC_WATO = ['WATOSM', 'WATOISO', 'WATOSEVOV'];
+// --- Monitores: accesorios básicos y los que se suman con capnógrafo y con presión invasiva ---
+const ACC_MON = ['045-003053-00', '9101-20-58104', '115-031324-00', '040-00004A-00', '040-00005A-00', '125-00002A-00'];
+const ACC_MON_CO2 = ACC_MON.concat(['VETA4AV', '115-043023-00', '115-043022-00', '115-043018-00']);
+const ACC_MON_IBP = ACC_MON.concat(['VETA4AV', '6800-30-50876', '115-043023-00', '115-043022-00', '115-043018-00']);
 const REGLAS_EQUIPO = {
   // --- Ultrasonidos portátiles ---
   'VETUSE3':    {transductores: ['6C2MV', 'L12-3MV', '6LE5VMV', 'C5-2M'],
@@ -1026,7 +1030,17 @@ const REGLAS_EQUIPO = {
   // WATO: solo soporte de monitor y vaporizadores
   'WATOEX35VSIVET': {accesorios: ACC_WATO},
   'WATOEX65KITV':   {accesorios: ACC_WATO},
-  'WATOA7V':        {accesorios: ACC_WATO}
+  'WATOA7V':        {accesorios: ACC_WATO},
+
+  // --- Monitores ---
+  'VETAL3V':        {accesorios: ACC_MON},
+  'VETAL3CO2V':     {accesorios: ACC_MON_CO2},
+  'VETAL-5-BASIC':  {accesorios: ACC_MON},
+  'VETAL-5-CO2':    {accesorios: ACC_MON_CO2},
+  'VETAL-5-CO2IBP': {accesorios: ACC_MON_IBP},
+  // EPM12MVET ya trae en su caja 2 el cable de ECG 115-031324-00 (lo dice su descripción), por eso no se le sugiere
+  'EPM12MVET':      {accesorios: ACC_MON.filter(c => c !== '115-031324-00')},
+  'EPM12MDRVET':    {accesorios: ACC_MON_CO2}
 };
 
 // PREGUNTAS_VERSION: preguntas que se hacen ANTES de agregar el equipo.
@@ -1061,7 +1075,15 @@ const PREGUNTAS_VERSION = [
   { texto: '¿Quieres que sea con carrito o con base para empotrarla a la pared?', busquedas: ['VETA3XV', 'VETA3X'], claves: ['VETA3XV'],
     opciones: [{etiqueta: 'Con carrito', siguiente: PREG_VETA3X_CARRITO}, {etiqueta: 'Con base para pared', siguiente: PREG_VETA3X_PARED}] },
   { texto: '¿Quieres que tenga el capnógrafo integrado?', busquedas: ['VETA5'], claves: ['VETA5'],
-    opciones: [{etiqueta: 'Sí, con capnógrafo', clave: 'VETA5'}, {etiqueta: 'No', clave: 'VETA5PLUS'}] }
+    opciones: [{etiqueta: 'Sí, con capnógrafo', clave: 'VETA5'}, {etiqueta: 'No', clave: 'VETA5PLUS'}] },
+  // Monitores
+  { texto: '¿Qué versión buscas?', busquedas: ['VETAL3'], claves: ['VETAL3V', 'VETAL3CO2V'],
+    opciones: [{etiqueta: 'Básico', clave: 'VETAL3V'}, {etiqueta: 'Con capnógrafo', clave: 'VETAL3CO2V'}] },
+  { texto: '¿Qué versión buscas?', busquedas: ['VETAL5'], claves: ['VETAL-5-BASIC', 'VETAL-5-CO2', 'VETAL-5-CO2IBP'],
+    opciones: [{etiqueta: 'Básico', clave: 'VETAL-5-BASIC'}, {etiqueta: 'Con capnógrafo', clave: 'VETAL-5-CO2'},
+               {etiqueta: 'Con capno y presión invasiva', clave: 'VETAL-5-CO2IBP'}] },
+  { texto: '¿Qué versión buscas?', busquedas: ['EPM12'], claves: ['EPM12MVET', 'EPM12MDRVET'],
+    opciones: [{etiqueta: 'Básico', clave: 'EPM12MVET'}, {etiqueta: 'Con medición de capnografía y gases anestésicos', clave: 'EPM12MDRVET'}] }
 ];
 const claveNorm = c => String(c || '').trim().toUpperCase();
 const busquedaNorm = q => String(q || '').toUpperCase().replace(/[\s\-_.]+/g, '');
@@ -1622,6 +1644,10 @@ const CAT_HOJA = {
 // CATEGORIAS_ACCESORIOS: igual, pero para accesorios y transductores. En la ventana salen en su propia pestaña
 // ("Accesorios y transductores"), separados de los equipos, y también se encuentran al buscar.
 const CATEGORIAS_ACCESORIOS = {
+  'monitores': [
+    '045-003053-00', '9101-20-58104', '115-031324-00', '040-00004A-00', '040-00005A-00', '125-00002A-00',
+    'VETA4AV', '6800-30-50876', '115-043023-00', '115-043022-00', '115-043018-00'
+  ],
   'anestesia': [
     'VETA3XBAIN', '115-00967A-00', '115-00966A-00', '033-001251-00', 'CARRITOBV', 'VETAGUARD', 'WATOISO', 'WATOSEVOV', '040-00043A-00', '6800-30-50876',
     'VETA4AV', '040-00034A-00', '040-00033A-00', '040-00032A-00', '040-00024A-00', 'KIT-BR-VET', '040-00042A-00', '040-001703-00',
@@ -1674,10 +1700,16 @@ const FAMILIAS = {
     {n: 'WATO 35',        claves: ['WATOEX35VSIVET']},
     {n: 'WATO 65',        claves: ['WATOEX65KITV']},
     {n: 'WATO A7',        claves: ['WATOA7V']}
+  ],
+  // Monitores: el UMEC12VCO2 se dejó como mosaico directo (sin preguntas) mientras Karen no mande sus datos.
+  'monitores': [
+    {n: 'VETAL 3',    claves: ['VETAL3V', 'VETAL3CO2V']},
+    {n: 'VETAL 5',    claves: ['VETAL-5-BASIC', 'VETAL-5-CO2', 'VETAL-5-CO2IBP']},
+    {n: 'EPM 12',     claves: ['EPM12MVET', 'EPM12MDRVET']},
+    {n: 'UMEC12VCO2', claves: ['UMEC12VCO2']}
   ]
 };
 const CATEGORIAS_PRODUCTO = {
-  'monitores':   ['9101-20-58104', '6800-30-50876', 'VETA4AV'],
   'bombas/infusion':  ['MICROGOTERO', 'NORMOGOTERO', 'BENEFUSION-EDS'],
   'bombas/perfusion': ['BENEFUSION-EDS'],
   'laboratorio': ['UA-60V', 'UA-60VT'],
@@ -1708,7 +1740,7 @@ function esAccesorio(p, ruta){
   return !ruta || rs.some(r => r === ruta || r.indexOf(ruta + '/') === 0);
 }
 // Cómo se llama la pestaña y el enlace de accesorios en cada categoría
-const ETQ_ACC = {'anestesia': 'Accesorios'};
+const ETQ_ACC = {'anestesia': 'Accesorios', 'monitores': 'Accesorios'};
 const etqAcc = cat => (cat && ETQ_ACC[cat.id]) || 'Accesorios y transductores';
 const _rutasCache = new WeakMap();
 function rutasDe(p){
