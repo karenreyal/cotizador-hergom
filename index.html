@@ -420,6 +420,7 @@
   .comp-kit{margin:2px 0 8px; border:1px solid #7cc59a; background:#f4fbf7; border-radius:9px; padding:6px 9px 2px;}
   .comp-kit-lbl{font-size:11px; font-weight:700; color:#1a7f37; text-transform:uppercase; letter-spacing:.4px;}
   .comp-kit .comp-row{border-top:none; padding-top:5px;}
+  .comp-kit .comp-row + .comp-row{border-top:1px solid #cfe8d8; padding-top:8px;}
   .comp-swap{max-width:104px; white-space:normal; text-align:center; line-height:1.2;}
   .comp-sec{border-top:1px solid #dbe9f6; margin:0 0 4px;}
   .comp-sec > summary{list-style:none; cursor:pointer; padding:9px 0; font-size:12.5px; font-weight:700; color:var(--navy-dark); display:flex; align-items:center; gap:7px; min-height:36px;}
@@ -934,7 +935,7 @@ const COMPLEMENTOS = {
 };
 
 // REGLAS_EQUIPO (con secciones): lo que se sugiere para cada equipo cuando está en la cotización.
-//   kit:           clave del kit que se ofrece en lugar del equipo (botón "Cambiar por el kit")
+//   kit / kits:    clave (o lista de claves) del kit que se ofrece en lugar del equipo (botón "Cambiar por el kit")
 //   aviso:         advertencia que sale al agregar el equipo y mientras siga en la cotización
 //   transductores: claves sugeridas en la sección "Transductores"
 //   accesorios:    claves sugeridas en la sección "Accesorios"
@@ -974,7 +975,34 @@ const REGLAS_EQUIPO = {
                  transductores: TRANS_DP,
                  accesorios: ['115-081316-00', '048-00160A-00', 'UMT-170']},
   'DP10VB':     {como: 'DP10V'},
-  'KITDP10VMC': {como: 'DP10V', incluye: ['65C15EAV', '115-081316-00']}
+  'KITDP10VMC': {como: 'DP10V', incluye: ['65C15EAV', '115-081316-00']},
+
+  // --- Ultrasonidos de gabinete ---
+  'VETUS5':     {transductores: ['L13-3', '6C2V', '6C2']},
+  'VETUS30':    {transductores: ['6C2MV', 'L12-3MV', 'P10-2MV', 'P8-2MV', 'C5-2M']},
+  'VETUSNOVA':  {kits: ['VETUSNOVAM', 'VETUSNOVAML'],
+                 transductores: ['C11-3V50', 'L13-3V', 'C5-1V50', 'P8-2V50'],
+                 accesorios: ['115-00706A-00']},
+  'VETUSNOVAM':  {como: 'VETUSNOVA', incluye: ['C11-3V50']},
+  'VETUSNOVAML': {como: 'VETUSNOVA', incluye: ['C11-3V50', 'L13-3V']},
+  'VETUS50':    {kits: ['VETUS50M', 'VETUS50ML', 'VETUS50MLS'],
+                 transductores: ['C11-3V50', 'L13-3V', 'C5-1V50', 'P8-2V', 'P8-2V50'],
+                 accesorios: ['115-00706A-00']},
+  'VETUS50M':   {como: 'VETUS50', incluye: ['C11-3V50']},
+  'VETUS50ML':  {como: 'VETUS50', incluye: ['C11-3V50', 'L13-3V']},
+  'VETUS50MLS': {como: 'VETUS50', incluye: ['C11-3V50', 'L13-3V', 'P8-2V', 'P8-2V50']},
+  'VETUS7B':    {transductores: ['C11-3S', 'L12-4S', 'P10-4SV', 'P8-2S']},
+  'VETUS8':     {kits: ['VETUS8ML', 'VETUS8MLS'],
+                 transductores: ['L12-4S', 'C11-3S', 'P10-4SV', 'P8-2S']},
+  'VETUS8ML':   {como: 'VETUS8', incluye: ['C11-3S', 'L12-4S']},
+  'VETUS8MLS':  {como: 'VETUS8', incluye: ['C11-3S', 'L12-4S', 'P8-2S']},
+  'VETUS80V':   {kits: ['VETUS80VL'],
+                 transductores: ['L13-3NS', 'L16-4HSV', 'C13-3SV', 'C11-3S', 'P10-4SV', 'P8-2S']},
+  'VETUS80VL':  {como: 'VETUS80V'},
+  'VETUS9PV':   {kits: ['VETUS9PVML', 'VETUS9PVMLS'],
+                 transductores: ['L13-3NS', 'C13-3SV', 'C11-3S', 'P10-4SV', 'P8-2S']},
+  'VETUS9PVML':  {como: 'VETUS9PV', incluye: ['L13-3NS', 'C11-3S']},
+  'VETUS9PVMLS': {como: 'VETUS9PV', incluye: ['L13-3NS', 'C11-3S', 'P8-2S']}
 };
 
 // PREGUNTAS_VERSION: preguntas que se hacen ANTES de agregar el equipo.
@@ -992,7 +1020,12 @@ const PREGUNTAS_VERSION = [
   { texto: TXT_VERSION, busquedas: ['VETUSE7'], claves: ['VETUSE7', 'VETUSE7ADV'],
     opciones: [{etiqueta: OP_BASICA, clave: 'VETUSE7'}, {etiqueta: OP_AVANZADA, clave: 'VETUSE7ADV'}] },
   { texto: TXT_VERSION, busquedas: ['Z60'], claves: ['Z60VET', 'Z60ADV'],
-    opciones: [{etiqueta: OP_BASICA, clave: 'Z60VET'}, {etiqueta: OP_AVANZADA, clave: 'Z60ADV'}] }
+    opciones: [{etiqueta: OP_BASICA, clave: 'Z60VET'}, {etiqueta: OP_AVANZADA, clave: 'Z60ADV'}] },
+  // VETUS9PV: hoy solo está en el catálogo como kit; si algún día se agrega el equipo solo, la primera opción aparece sola.
+  { texto: '¿Qué configuración del VETUS9PV buscas?', busquedas: ['VETUS9PV'], claves: ['VETUS9PV'],
+    opciones: [{etiqueta: 'Equipo solo', clave: 'VETUS9PV'},
+               {etiqueta: 'Con lineal y microconvexo', clave: 'VETUS9PVML'},
+               {etiqueta: 'Con lineal, microconvexo y sectorial', clave: 'VETUS9PVMLS'}] }
 ];
 const claveNorm = c => String(c || '').trim().toUpperCase();
 const busquedaNorm = q => String(q || '').toUpperCase().replace(/[\s\-_.]+/g, '');
@@ -1001,15 +1034,16 @@ Object.keys(COMPLEMENTOS).forEach(k => { COMP_MAP[claveNorm(k)] = COMPLEMENTOS[k
 const REGLAS_MAP = {};
 Object.keys(REGLAS_EQUIPO).forEach(k => { REGLAS_MAP[claveNorm(k)] = REGLAS_EQUIPO[k]; });
 // Regla de un producto ya resuelta (los kits heredan la del equipo, sin lo que ya traen). null si no tiene.
+// "kits" siempre es una lista (la regla puede traer "kit" o "kits"); un kit no sugiere otros kits.
 function reglaDe(clave){
   const r = REGLAS_MAP[claveNorm(clave)];
   if (!r) return null;
-  if (!r.como) return r;
+  if (!r.como) return {aviso: r.aviso, kits: [].concat(r.kits || r.kit || []), transductores: r.transductores, accesorios: r.accesorios};
   const b = REGLAS_MAP[claveNorm(r.como)];
   if (!b) return null;
   const fuera = new Set((r.incluye || []).map(claveNorm));
   const quita = l => (l || []).filter(c => !fuera.has(claveNorm(c)));
-  return {aviso: r.aviso || b.aviso, transductores: quita(b.transductores), accesorios: quita(b.accesorios)};
+  return {aviso: r.aviso || b.aviso, kits: [], transductores: quita(b.transductores), accesorios: quita(b.accesorios)};
 }
 function avisoDe(clave){ const r = reglaDe(clave); return (r && r.aviso) || ''; }
 function preguntaPorBusqueda(q){ return PREGUNTAS_VERSION.find(x => x.busquedas.some(b => busquedaNorm(b) === busquedaNorm(q))) || null; }
@@ -1538,6 +1572,7 @@ const CAT_HOJA = {
   'PMLS': 'ventiladores',
   'VENTILACION MECANICA': 'ventiladores',
   'LAMPARAS QUIRURGICAS': 'lamparas',
+  'ILUMINACION QUIRURGICA': 'lamparas',
   'ENDOSCOPIA': 'endoscopios',
   'HEMATOLOGIA': 'laboratorio/hematologia',
   'QUIMICA': 'laboratorio/quimica',
@@ -1580,6 +1615,16 @@ const FAMILIAS = {
     {n: 'DP50',         claves: ['DP50V']},
     {n: 'DP10',         claves: ['DP10V']},
     {n: 'CTS-800L5VET', claves: ['CTS-800L5VET']}
+  ],
+  'ultrasonidos/gabinete': [
+    {n: 'VETUS5',    claves: ['VETUS5']},
+    {n: 'VETUS30',   claves: ['VETUS30']},
+    {n: 'VETUSNOVA', claves: ['VETUSNOVA']},
+    {n: 'VETUS50',   claves: ['VETUS50']},
+    {n: 'VETUS7B',   claves: ['VETUS7B']},
+    {n: 'VETUS8',    claves: ['VETUS8']},
+    {n: 'VETUS80V',  claves: ['VETUS80V']},
+    {n: 'VETUS9PV',  claves: ['VETUS9PV', 'VETUS9PVML', 'VETUS9PVMLS']}
   ]
 };
 const CATEGORIAS_PRODUCTO = {
@@ -1691,10 +1736,10 @@ function pintarComp(){
   const fila = filas => '<div class="comp-card">' + filas.map(p => filaComplemento(p)).join('') + '</div>';
   let h = '<div class="pk-comp"><div class="comp-ok">✓ ' + esc(pk.comp) + ' agregado a la cotización</div>';
   if (g && g.aviso) h += '<div class="comp-aviso">⚠️ ' + esc(g.aviso) + '</div>';
-  if (g && g.kit) h += '<div class="comp-kit"><div class="comp-kit-lbl">Kit sugerido</div>' + filaComplemento(g.kit, botonKit(g)) + '</div>';
+  if (g) h += bloqueKits(g);
   if (g) g.secciones.forEach(s => { h += '<div class="comp-h">' + s.titulo + ' <span class="comp-n">' + s.filas.length + '</span></div>' + fila(s.filas); });
   if (g && g.planas.length) h += '<div class="comp-h">Complementos sugeridos <span class="comp-n">' + g.planas.length + '</span></div>' + fila(g.planas);
-  if (!g || !(g.n || g.kit)) h += '<div class="pk-vacio">Ya agregaste todo lo sugerido para este equipo.</div>';
+  if (!g || !(g.n || g.kits.length)) h += '<div class="pk-vacio">Ya agregaste todo lo sugerido para este equipo.</div>';
   return h + '<button type="button" class="btn-secondary pk-seguir" data-pk-seguir="1">Listo · seguir agregando productos</button></div>';
 }
 // Agrega desde la ventana; si es un equipo nuevo en la cotización y tiene sugerencias, se muestra la pantalla de complementos.
@@ -1702,7 +1747,7 @@ function agregarEnPicker(p){
   const yaVa = state.items.some(it => claveNorm(it.clave) === claveNorm(p.clave));
   agregarDeCatalogo(p);
   const g = yaVa ? null : grupoComplementos(p.clave);
-  if (g && (g.n || g.kit)){
+  if (g && (g.n || g.kits.length)){
     pk.comp = p.clave; pk.preg = null; pk.aviso = null;
     renderPicker();
     $pk('pkBody').scrollTop = 0;
@@ -2120,21 +2165,29 @@ function grupoComplementos(clave){
   const regla = reglaDe(k);
   const planas = sinCot(COMP_MAP[k]);
   if (!regla && !planas.length) return null;
-  const g = {base: clave, aviso: '', kit: null, secciones: [], planas};
+  const g = {base: clave, aviso: '', kits: [], secciones: [], planas};
   if (regla){
     g.aviso = regla.aviso || '';
-    const kitP = regla.kit ? buscarPrecios(regla.kit) : null;
-    if (kitP && !enCot.has(claveNorm(kitP.clave))) g.kit = kitP;
+    g.kits = sinCot(regla.kits);
     [['trans', 'Transductores', regla.transductores, true], ['acc', 'Accesorios', regla.accesorios, false]].forEach(([id, titulo, lista, abierta])=>{
       const filas = sinCot(lista);
       if (filas.length) g.secciones.push({id, titulo, filas, abierta});
     });
   }
   g.n = g.planas.length + g.secciones.reduce((s, x) => s + x.filas.length, 0);
-  return (g.n || g.kit || g.aviso) ? g : null;
+  return (g.n || g.kits.length || g.aviso) ? g : null;
 }
-function botonKit(g){
-  return `<button type="button" class="comp-add comp-swap" data-kit="${esc(g.kit.clave)}" data-base="${esc(g.base)}" ${(state.tipoPrecio === 'PD' ? g.kit.pd : g.kit.pp) > 0 ? '' : 'disabled'}>Cambiar por el kit</button>`;
+function botonKit(g, kit){
+  return `<button type="button" class="comp-add comp-swap" data-kit="${esc(kit.clave)}" data-base="${esc(g.base)}" ${(state.tipoPrecio === 'PD' ? kit.pd : kit.pp) > 0 ? '' : 'disabled'}>Cambiar por el kit</button>`;
+}
+// Recuadro verde con los kits sugeridos (uno o varios), cada uno con su botón "Cambiar por el kit".
+function bloqueKits(g){
+  if (!g.kits.length) return '';
+  return `
+      <div class="comp-kit">
+        <div class="comp-kit-lbl">${g.kits.length > 1 ? 'Kits sugeridos' : 'Kit sugerido'}</div>
+        ${g.kits.map(k => filaComplemento(k, botonKit(g, k))).join('')}
+      </div>`;
 }
 // Panel "Complementos sugeridos": uno por cada producto de la cotización que tenga sugerencias.
 function renderComplementos(){
@@ -2156,11 +2209,7 @@ function renderComplementos(){
         ${g.n ? `<div class="comp-sub">${g.n} disponible${g.n === 1 ? '' : 's'}</div>` : ''}
       </div>
       ${g.aviso ? `<div class="comp-aviso">⚠️ ${esc(g.aviso)}</div>` : ''}
-      ${g.kit ? `
-      <div class="comp-kit">
-        <div class="comp-kit-lbl">Kit sugerido</div>
-        ${filaComplemento(g.kit, botonKit(g))}
-      </div>` : ''}
+      ${bloqueKits(g)}
       ${g.secciones.map(s=>{
         const key = claveNorm(g.base) + '|' + s.id;
         const abierta = key in COMP_ABIERTO ? COMP_ABIERTO[key] : s.abierta;
