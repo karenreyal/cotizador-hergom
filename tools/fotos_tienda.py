@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Arma fotos-web.json (clave/SKU -> foto) leyendo la tienda de Hergom (Shopify).
+"""Arma fotos-web.json (clave/SKU -> foto, marca y descripción) leyendo la tienda de Hergom (Shopify).
 
 La tienda publica sus productos en https://hergom-medical.com/products.json (50 a 250 por página):
 cada producto trae sus variantes con `sku` (la clave) y sus fotos. Este script recorre todas las páginas
-y guarda, por cada SKU, la foto de esa variante (o, si no tiene, la primera foto del producto).
+y guarda, por cada SKU, la foto de esa variante (o, si no tiene, la primera foto del producto), la marca (vendor)
+y la descripción (título del producto; si el producto tiene varias variantes, se le agrega la variante entre paréntesis).
 
 El cotizador solo descarga este archivo (unos cuantos KB) y pide cada foto a la tienda cuando la necesita,
 así que no importa qué tan grande sea la lista de precios.
@@ -71,13 +72,17 @@ def productos_de_archivos(rutas):
 
 
 def construir(prods):
-    """SKU (mayúsculas, sin espacios) -> URL de la foto."""
+    """Devuelve (fotos, info): SKU (mayúsculas, sin espacios) -> URL de la foto, y SKU -> [marca, descripción]."""
     fotos = {}
+    info = {}
     for p in prods:
         imgs = [i for i in (p.get('images') or []) if isinstance(i, dict) and i.get('src')]
         por_id = {i.get('id'): i['src'] for i in imgs if i.get('id')}
         primera = imgs[0]['src'] if imgs else ''
-        for v in p.get('variants') or []:
+        variantes = p.get('variants') or []
+        marca = (p.get('vendor') or '').strip()
+        titulo = (p.get('title') or '').strip()
+        for v in variantes:
             sku = (v.get('sku') or '').strip().upper()
             if not sku:
                 continue
@@ -91,7 +96,13 @@ def construir(prods):
                 src = primera
             if src and sku not in fotos:       # si una clave se repite, gana la primera
                 fotos[sku] = src
-    return fotos
+            desc = titulo
+            vt = (v.get('title') or '').strip()
+            if desc and len(variantes) > 1 and vt and vt.lower() != 'default title' and vt.upper() != sku:
+                desc += f' ({vt})'
+            if (marca or desc) and sku not in info:
+                info[sku] = [marca, desc]
+    return fotos, info
 
 
 def con_base(fotos):
@@ -115,28 +126,31 @@ def main():
     a = ap.parse_args()
 
     prods = productos_de_archivos(a.desde) if a.desde else productos_de_la_tienda(a.tienda)
-    fotos = construir(prods)
-    print(f'productos leídos: {len(prods)} · claves con foto: {len(fotos)}')
+    fotos, info = construir(prods)
+    print(f'productos leídos: {len(prods)} · claves con foto: {len(fotos)} · con marca/descripción: {len(info)}')
     if not fotos:
         print('ERROR: no llegó ninguna clave con foto; no se toca el archivo.', file=sys.stderr)
         return 1
 
     base, rel = con_base(fotos)
     anterior = {}
+    info_anterior = {}
     if os.path.exists(a.salida):
         try:
             with open(a.salida, encoding='utf-8') as f:
                 ant = json.load(f)
             b0 = ant.get('base') or ''
             anterior = {k: (v if v.startswith('http') else b0 + v) for k, v in (ant.get('fotos') or {}).items()}
+            info_anterior = ant.get('info') or {}
         except (ValueError, OSError):
             anterior = {}
+            info_anterior = {}
     if anterior and len(fotos) < len(anterior) * 0.5 and not a.forzar:
         print(f'ERROR: la tienda trae {len(fotos)} claves y ya había {len(anterior)}; '
               'no se toca el archivo (usa --forzar si es correcto).', file=sys.stderr)
         return 2
-    if anterior == fotos:
-        print('sin cambios en las fotos; no se reescribe fotos-web.json')
+    if anterior == fotos and info_anterior == info:
+        print('sin cambios en las fotos ni en la marca/descripción; no se reescribe fotos-web.json')
         return 0
 
     salida = {
@@ -146,6 +160,7 @@ def main():
         'claves': len(fotos),
         'base': base,
         'fotos': dict(sorted(rel.items())),
+        'info': dict(sorted(info.items())),
     }
     with open(a.salida, 'w', encoding='utf-8') as f:
         json.dump(salida, f, ensure_ascii=False, separators=(',', ':'))
