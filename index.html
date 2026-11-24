@@ -432,6 +432,8 @@
   .comp-refac{display:inline-block; vertical-align:middle; margin-left:6px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:#6b4500; background:#fff4dd; border:1px solid #e0a23a; border-radius:999px; padding:0 7px; line-height:1.5;}
   .pk-filtro{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 2px 10px; padding:8px 12px; border-radius:8px; background:#eef4fb; font-size:13px; font-weight:700; color:var(--navy-dark);}
   .pk-filtro .link-btn{font-size:13px; padding:4px 0;}
+  .comp-grp{font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; padding:9px 0 2px; border-top:1px solid #dbe9f6;}
+  .comp-grp:first-child{border-top:none; padding-top:2px;}
   .comp-n{font-size:11px; font-weight:700; background:#dbe9f6; color:var(--navy); border-radius:999px; padding:1px 8px;}
   .pk-tile.pk-fam{min-height:64px; justify-content:center;}
   .pk-tile.pk-fam .pk-tn{font-size:16px;}
@@ -945,6 +947,8 @@ const COMPLEMENTOS = {
 //   transductores: claves sugeridas en la sección "Transductores"
 //   sustituto:     {n, clave}: en la tarjeta de aviso sale el botón "Cotizar el <n>", que lleva a la pregunta de esa clave
 //   juntas:        claves que se cotizan juntas: el aviso solo se muestra mientras falte alguna de las otras en la cotización
+//   secciones:     secciones extra con su propio título (consumibles, rotores, pruebas...): [{id, titulo, claves, aviso}] o, para dividirla en
+//                  subtítulos, [{id, titulo, aviso, grupos: [{t: subtítulo, claves}]}]; el "aviso" sale dentro de la sección
 //   refacciones:   claves de "accesorios" que se muestran con la etiqueta "Refacción" (el equipo ya trae una pieza y esta es de repuesto)
 //   accesorios:    claves sugeridas en la sección "Accesorios"
 //   como + incluye: el producto (normalmente un kit) se sugiere igual que otro equipo ("como"),
@@ -957,9 +961,17 @@ const TRANS_DP  = ['35C20EA', '65C15EAV', '75L38EAV', '75L50EAV'];
 const AVISO_NO_CARDIO = 'Este equipo no está hecho para cardio.';
 const AVISO_UMEC = 'Este equipo ya está descontinuado. En su lugar se cotiza el VETAL 5.';
 const AVISO_VETINA = 'Se deben cotizar juntas las claves VETINAES3 y VETINAES3VG-6.';
-// --- Endoscopios: accesorios (el carrito CARRITO-ENDO ya trae el carro 045-00002A-00 y el brazo 045-00004A-00, pero Karen pidió las tres claves) ---
-const ACC_ENDO = ['CARRITO-ENDO', '045-00004A-00', '045-00002A-00'];
+// --- Endoscopios: solo se sugiere el carrito completo CARRITO-ENDO (ya trae el carro 045-00002A-00 y el brazo 045-00004A-00; Karen pidió no ofrecer las piezas sueltas para evitar errores) ---
+const ACC_ENDO = ['CARRITO-ENDO'];
 const ACC_ENDO_VIS = ACC_ENDO.concat(['HF1816CBV', 'HF2423BV', 'HF2317HSV', 'HF1823AJV', 'HF2423RTV']);
+// --- Laboratorio ---
+const AV_BS240 = 'Este equipo trabaja con cualquier reactivo humano o veterinario, por eso no se cotizan.';
+const AV_UA60 = 'Este equipo no incluye tiras reactivas. Se sugiere cotizarlo siempre junto con la clave UA-60VT.';
+const AV_PEDIDO_MIN = 'El pedido mínimo es de $10,000.00 entre rotores y pruebas de inmunología.';
+const AV_ROTORES = 'El pedido mínimo es de 20 piezas.';
+const ROTORES = ['105-00486A-00', '105-00487A-00', '105-00484A-00', '105-00483A-00', '105-00489A-00', '105-00490A-00', '105-00488A-00'];
+const PRUEBAS_I3 = ['CPV_AG', 'FPV_AG', 'CDV_AG'];
+const sec = (titulo, claves, aviso) => ({id: 'cons', titulo, claves, aviso});
 // --- Anestesia: accesorios de la serie VETA ---
 const ACC_VETA3X = ['VETA3XBAIN', '115-00967A-00', '115-00966A-00', '033-001251-00', 'CARRITOBV', 'VETAGUARD', '040-00043A-00', '6800-30-50876',
                     'VETA4AV', '040-00034A-00', '040-00033A-00', '040-00032A-00', '040-00024A-00', 'KIT-BR-VET', '040-00042A-00', '040-001703-00'];
@@ -1060,7 +1072,21 @@ const REGLAS_EQUIPO = {
   // VETINA son dos claves que se cotizan juntas: el aviso sale mientras falte una de las dos en la cotización
   'VETINAES3':      {aviso: AVISO_VETINA, juntas: ['VETINAES3', 'VETINAES3VG-6'], accesorios: ACC_ENDO},
   'VETINAES3VG-6':  {aviso: AVISO_VETINA, juntas: ['VETINAES3', 'VETINAES3VG-6']},
-  'VIS-69':         {accesorios: ACC_ENDO_VIS}
+  'VIS-69':         {accesorios: ACC_ENDO_VIS},
+
+  // --- Laboratorio ---
+  // Hematología: cada analizador con sus consumibles (BC-5000V no tiene)
+  'BC-20VET':       {secciones: [sec('Consumibles', ['V-3CFLV', 'V-3DV', 'V-PV'])]},
+  'BC-30VET':       {secciones: [sec('Consumibles', ['V-3CFL30V', 'V-3D30V', 'V-PV'])]},
+  'BC-60RVET':      {secciones: [sec('Consumibles', ['V-6R', 'V-6DYE'])]},
+  // Química de rotores y inmunoensayo (VETXPERT). Las advertencias de pedido mínimo salen dentro de la sección de consumibles.
+  'VETXPERT-C5':    {secciones: [{id: 'rot', titulo: 'Rotores', claves: ROTORES, aviso: AV_ROTORES}]},
+  'VETXPERT-I3':    {secciones: [{id: 'cons', titulo: 'Consumibles', aviso: AV_PEDIDO_MIN, grupos: [{t: 'Pruebas', claves: PRUEBAS_I3}]}]},
+  'VETXPERT-CUBE':  {secciones: [{id: 'cons', titulo: 'Consumibles', aviso: AV_PEDIDO_MIN, grupos: [{t: 'Rotores', claves: ROTORES}, {t: 'Inmunología', claves: PRUEBAS_I3}]}]},
+  // Química húmeda: solo advertencia
+  'BS240V':         {aviso: AV_BS240},
+  // Orina: el analizador no trae tiras; el aviso desaparece cuando UA-60VT ya va en la cotización
+  'UA-60V':         {aviso: AV_UA60, juntas: ['UA-60V', 'UA-60VT'], secciones: [sec('Consumibles', ['UA-60VT'])]}
 };
 
 // PREGUNTAS_VERSION: preguntas que se hacen ANTES de agregar el equipo.
@@ -1103,7 +1129,13 @@ const PREGUNTAS_VERSION = [
     opciones: [{etiqueta: 'Básico', clave: 'VETAL-5-BASIC'}, {etiqueta: 'Con capnógrafo', clave: 'VETAL-5-CO2'},
                {etiqueta: 'Con capno y presión invasiva', clave: 'VETAL-5-CO2IBP'}] },
   { texto: '¿Qué versión buscas?', busquedas: ['EPM12'], claves: ['EPM12MVET', 'EPM12MDRVET'],
-    opciones: [{etiqueta: 'Básico', clave: 'EPM12MVET'}, {etiqueta: 'Con medición de capnografía y gases anestésicos', clave: 'EPM12MDRVET'}] }
+    opciones: [{etiqueta: 'Básico', clave: 'EPM12MVET'}, {etiqueta: 'Con medición de capnografía y gases anestésicos', clave: 'EPM12MDRVET'}] },
+  // Laboratorio: el equipo 2 en 1 (inmunoensayo + química) es el VETXPERT-CUBE. "claves" solo lleva el equipo de cada flujo para que
+  // elegir el CUBE desde una lista lo agregue directo.
+  { texto: '¿Quieres el equipo 2 en 1 (inmunoensayo + química)?', subtitulo: 'Química de rotores', busquedas: [], claves: ['VETXPERT-C5'],
+    opciones: [{etiqueta: 'No', clave: 'VETXPERT-C5'}, {etiqueta: 'Sí, el 2 en 1', clave: 'VETXPERT-CUBE'}] },
+  { texto: '¿Quieres el equipo 2 en 1 (inmunoensayo + química)?', subtitulo: 'Inmunoensayo', busquedas: [], claves: ['VETXPERT-I3'],
+    opciones: [{etiqueta: 'No', clave: 'VETXPERT-I3'}, {etiqueta: 'Sí, el 2 en 1', clave: 'VETXPERT-CUBE'}] }
 ];
 const claveNorm = c => String(c || '').trim().toUpperCase();
 const busquedaNorm = q => String(q || '').toUpperCase().replace(/[\s\-_.]+/g, '');
@@ -1126,12 +1158,13 @@ function avisoVigente(r, clave){
 function reglaDe(clave){
   const r = REGLAS_MAP[claveNorm(clave)];
   if (!r) return null;
-  if (!r.como) return {aviso: avisoVigente(r, clave), sustituto: r.sustituto, kits: [].concat(r.kits || r.kit || []), transductores: r.transductores, accesorios: r.accesorios, refacciones: r.refacciones || []};
+  if (!r.como) return {aviso: avisoVigente(r, clave), sustituto: r.sustituto, kits: [].concat(r.kits || r.kit || []), transductores: r.transductores, accesorios: r.accesorios, refacciones: r.refacciones || [], secciones: r.secciones || []};
   const b = REGLAS_MAP[claveNorm(r.como)];
   if (!b) return null;
   const fuera = new Set((r.incluye || []).map(claveNorm));
   const quita = l => (l || []).filter(c => !fuera.has(claveNorm(c)));
-  return {aviso: r.aviso || b.aviso, kits: [], transductores: quita(b.transductores), accesorios: quita(b.accesorios), refacciones: quita(b.refacciones)};
+  const quitaSec = (b.secciones || []).map(s => Object.assign({}, s, {claves: s.claves && quita(s.claves), grupos: s.grupos && s.grupos.map(gr => Object.assign({}, gr, {claves: quita(gr.claves)}))}));
+  return {aviso: r.aviso || b.aviso, kits: [], transductores: quita(b.transductores), accesorios: quita(b.accesorios), refacciones: quita(b.refacciones), secciones: quitaSec};
 }
 function avisoDe(clave){ const r = reglaDe(clave); return (r && r.aviso) || ''; }
 function preguntaPorBusqueda(q){ return PREGUNTAS_VERSION.find(x => x.busquedas.some(b => busquedaNorm(b) === busquedaNorm(q))) || null; }
@@ -1635,7 +1668,7 @@ const CATEGORIAS = [
   {id: 'ventiladores',    n: 'Ventiladores'},
   {id: 'lamparas',        n: 'Lámparas', subs: [{id: 'movil', n: 'Móvil'}, {id: 'techo', n: 'De techo'}, {id: 'pared', n: 'De pared'}]},
   {id: 'endoscopios',     n: 'Endoscopios'},
-  {id: 'laboratorio',     n: 'Laboratorio', subs: [{id: 'quimica', n: 'Química sanguínea'}, {id: 'hematologia', n: 'Hematología'}, {id: 'inmuno', n: 'Inmunoanálisis'}]},
+  {id: 'laboratorio',     n: 'Laboratorio', subs: [{id: 'hematologia', n: 'Hematología'}, {id: 'quimica', n: 'Química sanguínea'}, {id: 'inmuno', n: 'Inmunoensayo'}, {id: 'orina', n: 'Orina'}]},
   {id: 'basculas',        n: 'Básculas'},
   {id: 'ecg',             n: 'Electrocardiógrafos'}
 ];
@@ -1674,6 +1707,11 @@ const CAT_HOJA = {
 // CATEGORIAS_ACCESORIOS: igual, pero para accesorios y transductores. En la ventana salen en su propia pestaña
 // ("Accesorios y transductores"), separados de los equipos, y también se encuentran al buscar.
 const CATEGORIAS_ACCESORIOS = {
+  // Laboratorio: aquí son los consumibles (reactivos, rotores, pruebas y tiras); la pestaña se llama "Consumibles"
+  'laboratorio/hematologia': ['V-3CFLV', 'V-3DV', 'V-PV', 'V-3CFL30V', 'V-3D30V', 'V-6R', 'V-6DYE'],
+  'laboratorio/quimica':     ['105-00486A-00', '105-00487A-00', '105-00484A-00', '105-00483A-00', '105-00489A-00', '105-00490A-00', '105-00488A-00'],
+  'laboratorio/inmuno':      ['CPV_AG', 'FPV_AG', 'CDV_AG'],
+  'laboratorio/orina':       ['UA-60VT'],
   'endoscopios': ['CARRITO-ENDO', '045-00004A-00', '045-00002A-00', 'HF1816CBV', 'HF2423BV', 'HF2317HSV', 'HF1823AJV', 'HF2423RTV'],
   'monitores': [
     '045-003053-00', '9101-20-58104', '115-031324-00', '040-00004A-00', '040-00005A-00', '125-00002A-00',
@@ -1743,8 +1781,27 @@ const FAMILIAS = {
   'endoscopios': [
     {n: 'VETINA', claves: ['VETINAES3', 'VETINAES3VG-6'], juntas: true},
     {n: 'VIS 69', claves: ['VIS-69']}
+  ],
+  // Laboratorio (datos de Karen, 2026-11-24 13:47): cada subcategoría muestra sus equipos por nombre
+  'laboratorio/hematologia': [
+    {n: '3 partes', claves: ['BC-20VET']},
+    {n: '4 partes', claves: ['BC-30VET']},
+    {n: '5 partes', claves: ['BC-5000V']},
+    {n: '6 partes', claves: ['BC-60RVET']}
+  ],
+  'laboratorio/quimica': [
+    {n: 'De rotores',      claves: ['VETXPERT-C5', 'VETXPERT-CUBE']},   // pregunta si quiere el 2 en 1
+    {n: 'Química húmeda',  claves: ['BS240V']}
+  ],
+  'laboratorio/inmuno': [
+    {n: 'VETXPERT I3',     claves: ['VETXPERT-I3', 'VETXPERT-CUBE']}    // pregunta si quiere el 2 en 1
+  ],
+  'laboratorio/orina': [
+    {n: 'UA-60V',          claves: ['UA-60V']}
   ]
 };
+// Título de la vista de equipos cuando no es "¿Cuál equipo?"
+const TIT_FAMILIAS = {'laboratorio/hematologia': '¿De cuántas partes?', 'laboratorio/quimica': '¿Qué tipo de química?'};
 const CATEGORIAS_PRODUCTO = {
   // Lámparas (datos de Karen): las claves de cada subcategoría, en el orden en que las mandó
   'lamparas/movil': ['HYLED180MVET', 'VeLED-E3M'],
@@ -1752,7 +1809,7 @@ const CATEGORIAS_PRODUCTO = {
   'lamparas/pared': ['VELEDE3W', '0075B-PA00002'],
   'bombas/infusion':  ['MICROGOTERO', 'NORMOGOTERO', 'BENEFUSION-EDS'],
   'bombas/perfusion': ['BENEFUSION-EDS'],
-  'laboratorio': ['UA-60V', 'UA-60VT'],
+  'laboratorio/orina': ['UA-60V', 'UA-60VT'],
   'laboratorio/quimica': ['VETXPERT-CUBE'],
   'laboratorio/inmuno':  ['VETXPERT-CUBE']
 };
@@ -1789,7 +1846,7 @@ function esAccesorio(p, ruta){
   return !ruta || rs.some(r => r === ruta || r.indexOf(ruta + '/') === 0);
 }
 // Cómo se llama la pestaña y el enlace de accesorios en cada categoría
-const ETQ_ACC = {'anestesia': 'Accesorios', 'monitores': 'Accesorios', 'endoscopios': 'Accesorios'};
+const ETQ_ACC = {'anestesia': 'Accesorios', 'monitores': 'Accesorios', 'endoscopios': 'Accesorios', 'laboratorio': 'Consumibles'};
 const etqAcc = cat => (cat && ETQ_ACC[cat.id]) || 'Accesorios y transductores';
 const _rutasCache = new WeakMap();
 function rutasDe(p){
@@ -1870,12 +1927,12 @@ function pintarPregunta(preg, conCancelar){
 // Pantalla que sale justo después de agregar un equipo: kit sugerido y, abajo, transductores y accesorios con su botón "+ Agregar".
 function pintarComp(){
   const g = grupoComplementos(pk.comp);
-  const fila = filas => '<div class="comp-card">' + filas.map(p => filaComplemento(p, null, !!g && g.refac.has(claveNorm(p.clave)))).join('') + '</div>';
+  const fila = filas => '<div class="comp-card">' + filas.map(p => filaComplemento(p)).join('') + '</div>';
   const nombres = [pk.comp].concat(pk.compExtras || []);
   let h = '<div class="pk-comp"><div class="comp-ok">✓ ' + esc(nombres.join(' y ')) + (nombres.length > 1 ? ' agregados' : ' agregado') + ' a la cotización</div>';
   if (g && g.aviso) h += '<div class="comp-aviso">⚠️ ' + esc(g.aviso) + '</div>';
   if (g) h += bloqueKits(g);
-  if (g) g.secciones.forEach(s => { h += '<div class="comp-h">' + s.titulo + ' <span class="comp-n">' + s.filas.length + '</span></div>' + fila(s.filas); });
+  if (g) g.secciones.forEach(s => { h += '<div class="comp-h">' + s.titulo + ' <span class="comp-n">' + s.filas.length + '</span></div>' + (s.aviso ? '<div class="comp-aviso">⚠️ ' + esc(s.aviso) + '</div>' : '') + '<div class="comp-card">' + filasSeccionHtml(s, g) + '</div>'; });
   if (g && g.planas.length) h += '<div class="comp-h">Complementos sugeridos <span class="comp-n">' + g.planas.length + '</span></div>' + fila(g.planas);
   if (!g || !(g.n || g.kits.length)) h += '<div class="pk-vacio">Ya agregaste todo lo sugerido para este equipo.</div>';
   return h + '<button type="button" class="btn-secondary pk-seguir" data-pk-seguir="1">Listo · seguir agregando productos</button></div>';
@@ -1925,7 +1982,7 @@ function familiasActuales(cat){
   return vivas.length ? vivas : null;
 }
 function pintarFamilias(fams){
-  let h = '<div class="pk-sub">¿Cuál equipo?</div><div class="pk-grid">';
+  let h = '<div class="pk-sub">' + esc(TIT_FAMILIAS[rutaFamilias(pkCategoria())] || '¿Cuál equipo?') + '</div><div class="pk-grid">';
   h += fams.map(f => `<button type="button" class="pk-tile pk-fam" data-fam="${esc(f.n)}"><span class="pk-tn">${esc(f.n)}</span></button>`).join('');
   h += '</div><div class="pk-extra"><button type="button" class="link-btn" data-sinfam="1">' + esc(etqAcc(pkCategoria())) + '</button></div>';
   return h;
@@ -2363,6 +2420,12 @@ function filaComplemento(p, boton, refaccion){
         ${boton || `<button type="button" class="comp-add" data-comp="${esc(p.clave)}" ${precio > 0 ? '' : 'disabled'}>+ Agregar</button>`}
       </div>`;
 }
+// Las filas de una sección ya armada (con subtítulos si la sección trae "grupos"); una refacción lleva su etiqueta.
+function filasSeccionHtml(s, g){
+  const f = p => filaComplemento(p, null, g.refac.has(claveNorm(p.clave)));
+  if (s.grupos) return s.grupos.map(gr => '<div class="comp-grp">' + esc(gr.t) + '</div>' + gr.filas.map(f).join('')).join('');
+  return s.filas.map(f).join('');
+}
 // Qué se sugiere para un producto que va en la cotización: aviso, kit, secciones (transductores / accesorios) y lista simple.
 // Regresa null si no hay nada que sugerir. "n" cuenta las filas sugeridas (sin el kit).
 function grupoComplementos(clave){
@@ -2381,6 +2444,12 @@ function grupoComplementos(clave){
     [['trans', 'Transductores', regla.transductores, true], ['acc', 'Accesorios', regla.accesorios, false]].forEach(([id, titulo, lista, abierta])=>{
       const filas = sinCot(lista);
       if (filas.length) g.secciones.push({id, titulo, filas, abierta});
+    });
+    // secciones propias de la regla (consumibles, rotores, pruebas...), con su aviso y, si lo piden, subtítulos
+    (regla.secciones || []).forEach(s => {
+      const grupos = s.grupos ? s.grupos.map(gr => ({t: gr.t, filas: sinCot(gr.claves)})).filter(gr => gr.filas.length) : null;
+      const filas = grupos ? [].concat(...grupos.map(gr => gr.filas)) : sinCot(s.claves);
+      if (filas.length) g.secciones.push({id: s.id, titulo: s.titulo, filas, grupos, aviso: s.aviso || '', abierta: true});
     });
   }
   g.n = g.planas.length + g.secciones.reduce((s, x) => s + x.filas.length, 0);
@@ -2425,7 +2494,8 @@ function renderComplementos(){
         return `
       <details class="comp-sec" data-key="${esc(key)}" ${abierta ? 'open' : ''}>
         <summary>${s.titulo} <span class="comp-n">${s.filas.length}</span></summary>
-        ${s.filas.map(p => filaComplemento(p, null, g.refac.has(claveNorm(p.clave)))).join('')}
+        ${s.aviso ? `<div class="comp-aviso">⚠️ ${esc(s.aviso)}</div>` : ''}
+        ${filasSeccionHtml(s, g)}
       </details>`;
       }).join('')}
       ${g.planas.map(p => filaComplemento(p)).join('')}
