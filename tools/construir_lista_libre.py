@@ -73,6 +73,19 @@ def leer(ruta, fuente):
                 break
         if not fila_enc:
             continue
+        if 'pd' not in cols and 'pp' not in cols and 'clave' in cols:
+            # algunas hojas dejan sin encabezado las dos columnas de precio (PD y luego PP) justo después de la última con título
+            ultima = max(j for j, c in enumerate(celdas) if c)
+            n_ok = n_tot = 0
+            for r in ws.iter_rows(min_row=fila_enc + 1, max_row=fila_enc + 400, values_only=True):
+                if len(r) > ultima + 2 and str(r[cols['clave']] or '').strip():
+                    n_tot += 1
+                    n_ok += numero(r[ultima + 1]) is not None and numero(r[ultima + 2]) is not None
+            if n_tot and n_ok / n_tot >= 0.7:
+                cols['pd'], cols['pp'] = ultima + 1, ultima + 2
+                letras = lambda j: openpyxl.utils.get_column_letter(j + 1)
+                avisos.append(f'hoja "{ws.title}": los precios no tienen encabezado; se tomaron las columnas '
+                              f'{letras(ultima + 1)} y {letras(ultima + 2)} como PD y PP (confírmalo)')
         faltan = [k for k in ('clave', 'desc', 'marca', 'pd', 'pp') if k not in cols]
         if faltan:
             avisos.append(f'hoja "{ws.title}": falta la columna {", ".join(faltan)}; se salta')
@@ -86,15 +99,16 @@ def leer(ruta, fuente):
             desc = limpiar(r[cols['desc']])
             pd, pp = numero(r[cols['pd']]), numero(r[cols['pp']])
             nuevo = [marca, desc, pd, pp, fuente]
+            if pd is None and pp is None:
+                avisos.append(f'{clave} (fila {i}): sin precio PD ni PP; se salta')
+                continue
             if clave in productos:
                 ant = productos[clave]
                 if ant[2:4] != nuevo[2:4]:
                     avisos.append(f'clave repetida con precios distintos ({clave}, fila {i}): se usa la primera')
                 continue
             productos[clave] = nuevo
-            if pd is None and pp is None:
-                avisos.append(f'{clave} (fila {i}): sin precio PD ni PP')
-            elif pd is None:
+            if pd is None:
                 avisos.append(f'{clave} (fila {i}): sin PD (solo PP {pp})')
             elif pp is None:
                 avisos.append(f'{clave} (fila {i}): sin PP (solo PD {pd})')
@@ -115,10 +129,13 @@ def main():
     a = ap.parse_args()
 
     nuevos, avisos = leer(a.xlsx, a.fuente)
-    previos = {}
+    previos, archivos = {}, {}
     if os.path.exists(a.salida):
         with open(a.salida, encoding='utf-8') as f:
-            previos = (json.load(f).get('productos')) or {}
+            ant = json.load(f)
+        previos = ant.get('productos') or {}
+        archivos = {x.get('nombre'): x.get('archivo') for x in (ant.get('fuentes') or []) if x.get('archivo')}
+    archivos[a.fuente] = re.sub(r'^[0-9a-f]{8}-', '', os.path.basename(a.xlsx))
     # una lista actualizada reemplaza a la anterior con el mismo nombre
     conservados = {k: v for k, v in previos.items() if (v[4] if len(v) > 4 else '') != a.fuente}
     pisadas = [k for k in nuevos if k in conservados]
@@ -130,7 +147,8 @@ def main():
     salida = {
         'ok': True,
         'actualizado': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-        'fuentes': [{'nombre': n, 'productos': c} for n, c in sorted(fuentes.items())],
+        'fuentes': [dict({'nombre': n, 'productos': c}, **({'archivo': archivos[n]} if archivos.get(n) else {}))
+                    for n, c in sorted(fuentes.items())],
         'productos': dict(sorted(productos.items())),
     }
     with open(a.salida, 'w', encoding='utf-8') as f:
