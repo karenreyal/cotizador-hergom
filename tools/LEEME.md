@@ -45,3 +45,13 @@ Archivo que el robot solo lee (no lo modifica). Sirve para casos que la lista no
 - `tools/construir_catalogo.py`: convierte y verifica. Con `--prueba` escribe archivos `*-prueba.json` sin tocar los reales (bórralos después).
 
 Las fotos no viajan en el catálogo automático: siguen incrustadas en `index.html` por clave (un producto nuevo sale con un ícono hasta que se agregue su foto).
+
+## Fotos de la tienda (desde 2026-11-24)
+Para productos que no tienen foto incrustada (productos libres fuera de catálogo, o claves nuevas) el cotizador busca la foto en la tienda de la empresa por clave/SKU.
+- `fotos-web.json`: tabla clave -> foto. La arma `tools/fotos_tienda.py` leyendo `https://hergom-medical.com/products.json` (la tienda es Shopify y publica el SKU de cada variante y las URLs de sus fotos). Pesa unos KB: la página solo guarda la tabla y la foto se pide a la tienda al momento (con `?width=220`, para no bajar la imagen original). Sirve igual con una lista maestra de miles de claves.
+- Orden de foto en el cotizador: foto incrustada en `index.html` -> foto del catálogo -> foto de la tienda -> ícono gris. Si la foto de la tienda no carga (sin internet), queda el ícono gris, nunca una imagen rota.
+- `python3 tools/fotos_tienda.py` actualiza `fotos-web.json` solo si algo cambió. Si la tienda falla, responde vacía o trae menos de la mitad de las claves anteriores, NO toca el archivo y sale con error. Con `--desde archivo.json` se prueba sin leer la tienda.
+- Quién lo corre cada noche: pendiente de decidir con Karen (tarea de GitHub Actions o el robot del catálogo). Desde el entorno de Claude no se alcanza hergom-medical.com (red restringida), por eso no se puede correr aquí.
+- El `fotos-web.json` publicado el 2026-11-24 es una semilla de 6 claves (H2-127, 7-93-7, 7-94-7, 7-95-7, MT1 y UMEC100H) para probar de inmediato.
+- Ojo: la primera foto de una variante no siempre es una foto limpia (algunas son diseños con texto). Para una clave del catálogo, la foto incrustada en `index.html` siempre gana.
+

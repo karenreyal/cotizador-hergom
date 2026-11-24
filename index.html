@@ -493,6 +493,9 @@
   .pk-comp .sug-cat{margin-top:16px;}
   #catSugBox .sug-cat{margin-top:12px;}
   .comp-rec{display:inline-block; vertical-align:middle; margin-left:6px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:#14612b; background:#e9f7ef; border:1px solid #7cc59a; border-radius:999px; padding:0 7px; line-height:1.5;}
+/* foto de la tienda: aviso bajo cada partida */
+.item-foto{margin:2px 0 8px; font-size:12px; color:var(--muted);}
+.item-foto:empty{display:none;}
 
   @media print{
     @page{ size: letter portrait; margin: 8mm; }
@@ -898,10 +901,82 @@ let PRODUCTS = [];
 let CAT_IMG = {};
 const IMAGES = JSON.parse(document.getElementById('images-data').textContent);
 const NO_IMG_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" rx="10" fill="#f2f5f8"/><g stroke="#c4cedb" stroke-width="2.5" fill="none" stroke-linecap="round"><path d="M22 54 L34 38 L44 48 L52 34 L62 54"/><circle cx="30" cy="28" r="5"/></g></svg>');
+// ---------- Fotos de la tienda (hergom-medical.com) ----------
+// fotos-web.json (clave/SKU -> foto) lo actualiza cada noche una tarea de GitHub leyendo la tienda
+// (tools/fotos_tienda.py). La página solo guarda esa tabla, no las fotos: la foto se pide a la tienda
+// cuando una partida (o el selector) la necesita. Sirve igual con una lista maestra de miles de claves.
+// Orden de búsqueda de foto: 1) foto incrustada en esta página, 2) foto del catálogo, 3) foto de la tienda, 4) ícono gris.
+let FOTOS_WEB = {};
+let FOTOS_WEB_BASE = '';
+let FOTOS_WEB_LISTA = false;
+const FOTOS_WEB_ANCHO = 220;   // px; la tienda redimensiona la foto (así no se baja la imagen de 2000 px)
+function fotoWebUrl(clave){
+  const c = (clave || '').trim().toUpperCase();
+  if (!c || !Object.prototype.hasOwnProperty.call(FOTOS_WEB, c)) return '';
+  const r = FOTOS_WEB[c];
+  const u = /^https?:/i.test(r) ? r : FOTOS_WEB_BASE + r;
+  return u + (u.indexOf('?') < 0 ? '?' : '&') + 'width=' + FOTOS_WEB_ANCHO;
+}
 function imgFor(clave){
   const c = (clave || '').trim().toUpperCase();
-  return IMAGES[c] ? ('data:image/jpeg;base64,' + IMAGES[c]) : (CAT_IMG[c] || NO_IMG_SVG);
+  if (IMAGES[c]) return 'data:image/jpeg;base64,' + IMAGES[c];
+  return CAT_IMG[c] || fotoWebUrl(c) || NO_IMG_SVG;
 }
+// si la foto de la tienda no carga (sin internet, foto borrada), se deja el ícono gris en lugar de una imagen rota
+document.addEventListener('error', ev => {
+  const t = ev.target;
+  if (!t || t.tagName !== 'IMG' || t.dataset.sinFoto) return;
+  const s = t.getAttribute('src') || '';
+  if (!/^https?:/i.test(s)) return;
+  t.dataset.sinFoto = '1';
+  t.setAttribute('src', NO_IMG_SVG);
+}, true);
+
+function textoFotoItem(it){
+  const c = (it.clave || '').trim().toUpperCase();
+  if (!c) return '📷 Escribe la clave y la foto se busca sola en la tienda.';
+  if (IMAGES[c] || CAT_IMG[c]) return '';
+  if (fotoWebUrl(c)) return '📷 Foto encontrada en la tienda.';
+  if (buscarPrecios(c)) return '';
+  return FOTOS_WEB_LISTA ? 'Sin foto en la tienda para esta clave.' : '';
+}
+// pone la foto y el aviso de UNA partida sin volver a dibujar la lista (así no se pierde el cursor al escribir)
+function actualizarMiniaturaItem(id){
+  const it = state.items.find(x => String(x.id) === String(id));
+  const card = document.querySelector('#itemsList .item-card[data-id="' + id + '"]');
+  if (!it || !card) return;
+  const im = card.querySelector('.item-thumb');
+  const u = imgFor(it.clave);
+  if (im && im.getAttribute('src') !== u){ delete im.dataset.sinFoto; im.setAttribute('src', u); }
+  const h = card.querySelector('.item-foto');
+  if (h) h.textContent = textoFotoItem(it);
+}
+function actualizarMiniaturas(){
+  try{
+    if (typeof state !== 'undefined' && state.items && state.items.length){
+      state.items.forEach(it => actualizarMiniaturaItem(it.id));
+      render();
+    }
+    if (typeof refrescarPicker === 'function') refrescarPicker();
+  }catch(e){}
+}
+async function cargarFotosWeb(){
+  try{
+    const d = await pedirJson(CAT_AUTO_BASE + 'fotos-web.json', 8000);
+    if (!d || !d.fotos || typeof d.fotos !== 'object') return;
+    const m = {};
+    Object.keys(d.fotos).forEach(k => {
+      const v = d.fotos[k];
+      if (typeof v === 'string' && v) m[String(k).trim().toUpperCase()] = v;
+    });
+    FOTOS_WEB = m;
+    FOTOS_WEB_BASE = (typeof d.base === 'string') ? d.base : '';
+    FOTOS_WEB_LISTA = true;
+    actualizarMiniaturas();
+  }catch(e){ /* sin tabla de fotos: todo sigue igual, solo sin fotos de la tienda */ }
+}
+setTimeout(cargarFotosWeb, 0);
+
 
 // Plan de financiamiento vigente: 6, 12 y 18 meses sin intereses (MSI) y 24 meses con 7% de interés
 // sobre el pago restante (después del enganche), igual que en el cotizador anterior.
@@ -2644,7 +2719,7 @@ function updateItem(id, field, value){
   const it = state.items.find(it=>it.id===id);
   if (!it) return;
   it[field] = value;
-  if (field === 'clave') renderComplementos();
+  if (field === 'clave'){ renderComplementos(); actualizarMiniaturaItem(id); }
   render();
 }
 
@@ -2677,6 +2752,7 @@ function renderItemsEditor(){
           <input type="text" data-field="clave" data-id="${it.id}" value="${esc(it.clave)}">
         </div>
       </div>
+      <div class="hint item-foto" data-foto-for="${it.id}">${esc(textoFotoItem(it))}</div>
       <div class="item-bottom">
         <div class="mini-field">
           <label>${state.tipoPrecio === 'PD' ? 'Precio lista PD (sin IVA)' : 'Precio (IVA incl.)'}</label>
