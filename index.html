@@ -415,6 +415,7 @@
   .aviso-btns{display:flex; flex-direction:column; align-items:stretch; gap:2px;}
   .aviso-btns .btn-primary{margin-top:0; min-height:48px;}
   .aviso-btns .link-btn{align-self:center;}
+  .aviso-btns .btn-secondary{margin-top:8px; min-height:46px; font-size:14px; background:#fff;}
   .preg-opt.preg-prox, .preg-opt:disabled{opacity:.55; cursor:default; background:#f3f4f6; border-color:#c9ced6;}
   .preg-opt.preg-prox:hover{background:#f3f4f6;}
   .comp-aviso{margin:2px 0 8px; padding:8px 10px; border-radius:8px; background:#fff4dd; border:1px solid #e0a23a; color:#6b4500; font-size:12.5px; font-weight:700; line-height:1.35;}
@@ -942,6 +943,8 @@ const COMPLEMENTOS = {
 //   kit / kits:    clave (o lista de claves) del kit que se ofrece en lugar del equipo (botón "Cambiar por el kit")
 //   aviso:         advertencia que sale al agregar el equipo y mientras siga en la cotización
 //   transductores: claves sugeridas en la sección "Transductores"
+//   sustituto:     {n, clave}: en la tarjeta de aviso sale el botón "Cotizar el <n>", que lleva a la pregunta de esa clave
+//   juntas:        claves que se cotizan juntas: el aviso solo se muestra mientras falte alguna de las otras en la cotización
 //   refacciones:   claves de "accesorios" que se muestran con la etiqueta "Refacción" (el equipo ya trae una pieza y esta es de repuesto)
 //   accesorios:    claves sugeridas en la sección "Accesorios"
 //   como + incluye: el producto (normalmente un kit) se sugiere igual que otro equipo ("como"),
@@ -953,6 +956,10 @@ const TRANS_E7  = ['C11-3S', 'C5-1SV', 'L13-3NSV', 'L16-4HSV'];
 const TRANS_DP  = ['35C20EA', '65C15EAV', '75L38EAV', '75L50EAV'];
 const AVISO_NO_CARDIO = 'Este equipo no está hecho para cardio.';
 const AVISO_UMEC = 'Este equipo ya está descontinuado. En su lugar se cotiza el VETAL 5.';
+const AVISO_VETINA = 'Se deben cotizar juntas las claves VETINAES3 y VETINAES3VG-6.';
+// --- Endoscopios: accesorios (el carrito CARRITO-ENDO ya trae el carro 045-00002A-00 y el brazo 045-00004A-00, pero Karen pidió las tres claves) ---
+const ACC_ENDO = ['CARRITO-ENDO', '045-00004A-00', '045-00002A-00'];
+const ACC_ENDO_VIS = ACC_ENDO.concat(['HF1816CBV', 'HF2423BV', 'HF2317HSV', 'HF1823AJV', 'HF2423RTV']);
 // --- Anestesia: accesorios de la serie VETA ---
 const ACC_VETA3X = ['VETA3XBAIN', '115-00967A-00', '115-00966A-00', '033-001251-00', 'CARRITOBV', 'VETAGUARD', '040-00043A-00', '6800-30-50876',
                     'VETA4AV', '040-00034A-00', '040-00033A-00', '040-00032A-00', '040-00024A-00', 'KIT-BR-VET', '040-00042A-00', '040-001703-00'];
@@ -1047,7 +1054,13 @@ const REGLAS_EQUIPO = {
   'EPM12MVET':      {accesorios: ACC_MON, refacciones: ['115-031324-00']},
   'EPM12MDRVET':    {accesorios: ACC_MON_CO2},
   // UMEC12VCO2 está descontinuado: solo lleva la advertencia (se agrega si Karen o el cliente insisten)
-  'UMEC12VCO2':     {aviso: AVISO_UMEC}
+  'UMEC12VCO2':     {aviso: AVISO_UMEC, sustituto: {n: 'VETAL 5', clave: 'VETAL-5-BASIC'}},
+
+  // --- Endoscopios ---
+  // VETINA son dos claves que se cotizan juntas: el aviso sale mientras falte una de las dos en la cotización
+  'VETINAES3':      {aviso: AVISO_VETINA, juntas: ['VETINAES3', 'VETINAES3VG-6'], accesorios: ACC_ENDO},
+  'VETINAES3VG-6':  {aviso: AVISO_VETINA, juntas: ['VETINAES3', 'VETINAES3VG-6']},
+  'VIS-69':         {accesorios: ACC_ENDO_VIS}
 };
 
 // PREGUNTAS_VERSION: preguntas que se hacen ANTES de agregar el equipo.
@@ -1100,10 +1113,20 @@ const REGLAS_MAP = {};
 Object.keys(REGLAS_EQUIPO).forEach(k => { REGLAS_MAP[claveNorm(k)] = REGLAS_EQUIPO[k]; });
 // Regla de un producto ya resuelta (los kits heredan la del equipo, sin lo que ya traen). null si no tiene.
 // "kits" siempre es una lista (la regla puede traer "kit" o "kits"); un kit no sugiere otros kits.
+// El aviso de una regla; con "juntas" no se muestra cuando las otras claves del grupo ya van en la cotización.
+function avisoVigente(r, clave){
+  if (!r || !r.aviso) return '';
+  if (r.juntas){
+    const enCot = new Set(state.items.map(it => claveNorm(it.clave)));
+    const otras = r.juntas.filter(c => claveNorm(c) !== claveNorm(clave));
+    if (otras.length && otras.every(c => enCot.has(claveNorm(c)))) return '';
+  }
+  return r.aviso;
+}
 function reglaDe(clave){
   const r = REGLAS_MAP[claveNorm(clave)];
   if (!r) return null;
-  if (!r.como) return {aviso: r.aviso, kits: [].concat(r.kits || r.kit || []), transductores: r.transductores, accesorios: r.accesorios, refacciones: r.refacciones || []};
+  if (!r.como) return {aviso: avisoVigente(r, clave), sustituto: r.sustituto, kits: [].concat(r.kits || r.kit || []), transductores: r.transductores, accesorios: r.accesorios, refacciones: r.refacciones || []};
   const b = REGLAS_MAP[claveNorm(r.como)];
   if (!b) return null;
   const fuera = new Set((r.incluye || []).map(claveNorm));
@@ -1651,6 +1674,7 @@ const CAT_HOJA = {
 // CATEGORIAS_ACCESORIOS: igual, pero para accesorios y transductores. En la ventana salen en su propia pestaña
 // ("Accesorios y transductores"), separados de los equipos, y también se encuentran al buscar.
 const CATEGORIAS_ACCESORIOS = {
+  'endoscopios': ['CARRITO-ENDO', '045-00004A-00', '045-00002A-00', 'HF1816CBV', 'HF2423BV', 'HF2317HSV', 'HF1823AJV', 'HF2423RTV'],
   'monitores': [
     '045-003053-00', '9101-20-58104', '115-031324-00', '040-00004A-00', '040-00005A-00', '125-00002A-00',
     'VETA4AV', '6800-30-50876', '115-043023-00', '115-043022-00', '115-043018-00'
@@ -1714,6 +1738,11 @@ const FAMILIAS = {
     {n: 'VETAL 5',    claves: ['VETAL-5-BASIC', 'VETAL-5-CO2', 'VETAL-5-CO2IBP']},
     {n: 'EPM 12',     claves: ['EPM12MVET', 'EPM12MDRVET']},
     {n: 'UMEC12VCO2', claves: ['UMEC12VCO2']}
+  ],
+  // Endoscopios (rígida y flexible): VETINA son dos claves que se agregan juntas ("juntas"); el aviso lo trae su regla.
+  'endoscopios': [
+    {n: 'VETINA', claves: ['VETINAES3', 'VETINAES3VG-6'], juntas: true},
+    {n: 'VIS 69', claves: ['VIS-69']}
   ]
 };
 const CATEGORIAS_PRODUCTO = {
@@ -1760,7 +1789,7 @@ function esAccesorio(p, ruta){
   return !ruta || rs.some(r => r === ruta || r.indexOf(ruta + '/') === 0);
 }
 // Cómo se llama la pestaña y el enlace de accesorios en cada categoría
-const ETQ_ACC = {'anestesia': 'Accesorios', 'monitores': 'Accesorios'};
+const ETQ_ACC = {'anestesia': 'Accesorios', 'monitores': 'Accesorios', 'endoscopios': 'Accesorios'};
 const etqAcc = cat => (cat && ETQ_ACC[cat.id]) || 'Accesorios y transductores';
 const _rutasCache = new WeakMap();
 function rutasDe(p){
@@ -1868,9 +1897,15 @@ function agregarEnPicker(p, extras){
 
 // Advertencia antes de agregar un equipo (por ejemplo "no está hecho para cardio"): se confirma o se cancela.
 function pintarAviso(p){
+  const r = reglaDe(p.clave), sust = r && r.sustituto && preguntaPorClave(r.sustituto.clave) ? r.sustituto : null;
+  const n = (pk.avisoExtras || []).length + 1;
+  const ok = n > 1 ? 'Agregar las ' + n + ' claves' : 'Agregar de todos modos';
   return '<div class="aviso-card" id="pkAviso"><div class="aviso-title">⚠️ ' + esc(p.clave) + '</div>' +
     '<div class="aviso-txt">' + esc(avisoDe(p.clave)) + '</div>' +
-    '<div class="aviso-btns"><button type="button" class="btn-primary" data-pk-aviso-ok="1">Agregar de todos modos</button>' +
+    '<div class="aviso-btns">' +
+    (sust ? '<button type="button" class="btn-primary" data-pk-sust="1">Cotizar el ' + esc(sust.n) + '</button>' +
+            '<button type="button" class="btn-secondary" data-pk-aviso-ok="1">' + ok + '</button>'
+          : '<button type="button" class="btn-primary" data-pk-aviso-ok="1">' + ok + '</button>') +
     '<button type="button" class="link-btn" data-pk-cancel="1">Cancelar</button></div></div>';
 }
 
@@ -1908,8 +1943,8 @@ function elegirFamilia(nombre){
     $pk('pkBody').scrollTop = 0;
     return;
   }
-  const p = buscarPrecios(f.claves[0]);
-  if (p) intentarAgregar(p);
+  const ps = (f.juntas ? f.claves : f.claves.slice(0, 1)).map(c => buscarPrecios(c)).filter(Boolean);
+  if (ps.length) intentarAgregar(ps[0], ps.slice(1));   // con "juntas" se agregan todas las claves de la familia a la vez
 }
 
 // Pregunta de una subcategoría (por ejemplo ¿De 1 o 2 satélites?): regresa las opciones con sus productos, o null si no aplica.
@@ -2137,7 +2172,7 @@ $pk('pkSearch').addEventListener('keydown', (e)=>{
 
 // Un solo manejador para todo lo que se toca dentro de la ventana
 $pk('pkBody').addEventListener('click', (e)=>{
-  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-aviso-ok],[data-vista],[data-fam],[data-sinfam],[data-comp],[data-kit],[data-pk-seguir],[data-pk-global],[data-pk-libre],[data-filtro],[data-filtro-quitar]');
+  const t = e.target.closest('[data-cat],[data-sub],[data-todo],.pk-item,[data-op],[data-pk-cancel],[data-pk-aviso-ok],[data-pk-sust],[data-vista],[data-fam],[data-sinfam],[data-comp],[data-kit],[data-pk-seguir],[data-pk-global],[data-pk-libre],[data-filtro],[data-filtro-quitar]');
   if (!t) return;
   if (t.dataset.op !== undefined){
     const o = pk.ops[Number(t.dataset.op)];
@@ -2152,6 +2187,14 @@ $pk('pkBody').addEventListener('click', (e)=>{
     pk.preg = null; pk.pila = []; pk.q = ''; $pk('pkSearch').value = '';
     intentarAgregar(o.p, o.extras);
     renderPicker();
+    return;
+  }
+  if (t.dataset.pkSust){   // en lugar del equipo descontinuado se cotiza el sustituto: se abre su pregunta de versión
+    const r = pk.aviso ? reglaDe(pk.aviso.clave) : null, preg = r && r.sustituto ? preguntaPorClave(r.sustituto.clave) : null;
+    pk.aviso = null; pk.avisoExtras = []; pk.pila = [];
+    pk.preg = preg && armarPregunta(preg) ? preg : null;
+    renderPicker();
+    $pk('pkBody').scrollTop = 0;
     return;
   }
   if (t.dataset.pkAvisoOk){
