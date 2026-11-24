@@ -34,9 +34,11 @@ POR_PAGINA = 250
 MAX_PAGINAS = 60          # tope de seguridad (15,000 productos)
 
 
-def pedir(url, intentos=3):
+def pedir(url, intentos=6):
+    """Lee un JSON. Si la tienda dice "demasiadas peticiones" (429) o falla (5xx), espera y reintenta."""
     ultimo = None
     for n in range(intentos):
+        espera = 5 * (n + 1)
         try:
             req = urllib.request.Request(url, headers={
                 'User-Agent': 'cotizador-hergom-fotos/1.0 (+https://karenreyal.github.io/cotizador-hergom/)',
@@ -44,9 +46,21 @@ def pedir(url, intentos=3):
             })
             with urllib.request.urlopen(req, timeout=60) as r:
                 return json.loads(r.read().decode('utf-8'))
+        except urllib.error.HTTPError as e:
+            ultimo = e
+            if e.code == 429 or e.code >= 500:
+                try:
+                    espera = max(espera, min(int(e.headers.get('Retry-After', '0')), 120))
+                except ValueError:
+                    pass
+                espera = max(espera, 30 * (n + 1)) if e.code == 429 else espera
+            else:
+                break                      # 403, 404...: reintentar no sirve
         except (urllib.error.URLError, TimeoutError, ValueError) as e:
             ultimo = e
-            time.sleep(2 * (n + 1))
+        if n < intentos - 1:
+            print(f'  reintento {n + 1}/{intentos - 1} en {espera} s ({ultimo})', file=sys.stderr)
+            time.sleep(espera)
     raise RuntimeError(f'no se pudo leer {url}: {ultimo}')
 
 
@@ -58,7 +72,7 @@ def productos_de_la_tienda(tienda):
         if not lote:
             break
         todos.extend(lote)
-        time.sleep(1)     # sin prisa: la tienda no se satura
+        time.sleep(2)     # sin prisa: la tienda no se satura
     return todos
 
 
