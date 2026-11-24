@@ -934,11 +934,9 @@ let itemSeq = 0;
 // Para agregar o cambiar sugerencias solo se edita este bloque.
 
 // COMPLEMENTOS (lista simple): cuando una de estas claves está en la cotización, se sugieren las claves de su lista.
+// Hoy está vacía: Rayos X pasó a REGLAS_EQUIPO con los accesorios que mandó Karen (2026-11-24); las sugerencias planas anteriores
+// (generador <-> flat panel, bases DRX para el VETIGEN-P50) se quitaron para no duplicar ni sugerir piezas que no son de ese equipo.
 const COMPLEMENTOS = {
-  // --- Rayos X ---
-  'VETIGEN-P50':  ['VETIGENTR', 'VETIPADPLUSV', 'VETIPADC1V', 'BXJJ-X004', 'BX-005'],
-  'VETIPADPLUSV': ['VETIGEN-P50', 'VETIGENTR'],
-  'VETIPADC1V':   ['VETIGEN-P50', 'VETIGENTR']
 };
 
 // REGLAS_EQUIPO (con secciones): lo que se sugiere para cada equipo cuando está en la cotización.
@@ -985,6 +983,9 @@ const ACC_WATO = ['WATOSM', 'WATOISO', 'WATOSEVOV'];
 const ACC_MON = ['045-003053-00', '9101-20-58104', '115-031324-00', '040-00004A-00', '040-00005A-00', '125-00002A-00'];
 const ACC_MON_CO2 = ACC_MON.concat(['VETA4AV', '115-043023-00', '115-043022-00', '115-043018-00']);
 const ACC_MON_IBP = ACC_MON.concat(['VETA4AV', '6800-30-50876', '115-043023-00', '115-043022-00', '115-043018-00']);
+// --- Rayos X portátiles: accesorios de cada generador y de los flat panel ---
+const ACC_DRX  = ['BXJJ-X004', 'BX-005', 'DRXTR1'];
+const ACC_FLAT = ['CS-06', 'DRXTR2', 'VETIPADBOX'];
 const REGLAS_EQUIPO = {
   // --- Ultrasonidos portátiles ---
   'VETUSE3':    {transductores: ['6C2MV', 'L12-3MV', '6LE5VMV', 'C5-2M'],
@@ -1086,7 +1087,17 @@ const REGLAS_EQUIPO = {
   // Química húmeda: solo advertencia
   'BS240V':         {aviso: AV_BS240},
   // Orina: el analizador no trae tiras; el aviso desaparece cuando UA-60VT ya va en la cotización
-  'UA-60V':         {aviso: AV_UA60, juntas: ['UA-60V', 'UA-60VT'], secciones: [sec('Consumibles', ['UA-60VT'])]}
+  'UA-60V':         {aviso: AV_UA60, juntas: ['UA-60V', 'UA-60VT'], secciones: [sec('Consumibles', ['UA-60VT'])]},
+
+  // --- Rayos X ---
+  // VETIXS380 (sala) ya incluye generador, flat panel, mesa y estación de trabajo: no lleva sugerencias.
+  'VETIGEN-P50':    {accesorios: ['VETIGENTR']},
+  'DRX3':           {accesorios: ACC_DRX},
+  'DRX3.2':         {accesorios: ACC_DRX},
+  'BEATLE-06P1H':   {accesorios: ['MS-06P', 'MS-05P']},
+  'VETIPADPLUSV':   {accesorios: ACC_FLAT},
+  'VETIPADC1V':     {accesorios: ACC_FLAT},
+  '4336WC':         {accesorios: ACC_FLAT}
 };
 
 // PREGUNTAS_VERSION: preguntas que se hacen ANTES de agregar el equipo.
@@ -1656,7 +1667,7 @@ function pct(n){ return `${Number(n)||0}%`; }
 const CATEGORIAS = [
   {id: 'resonancia',      n: 'Resonancia magnética'},
   {id: 'tomografia',      n: 'Tomografía'},
-  {id: 'rayosx',          n: 'Rayos X'},
+  {id: 'rayosx',          n: 'Rayos X', subs: [{id: 'portatiles', n: 'Portátiles'}, {id: 'sala', n: 'Sala de rayos X'}]},
   {id: 'ultrasonidos',    n: 'Ultrasonidos', subs: [{id: 'portatiles', n: 'Portátiles'}, {id: 'gabinete', n: 'De gabinete'}]},
   {id: 'anestesia',       n: 'Máquinas de anestesia'},
   {id: 'monitores',       n: 'Monitores'},
@@ -1712,6 +1723,8 @@ const CATEGORIAS_ACCESORIOS = {
   'laboratorio/quimica':     ['105-00486A-00', '105-00487A-00', '105-00484A-00', '105-00483A-00', '105-00489A-00', '105-00490A-00', '105-00488A-00'],
   'laboratorio/inmuno':      ['CPV_AG', 'FPV_AG', 'CDV_AG'],
   'laboratorio/orina':       ['UA-60VT'],
+  // Rayos X portátiles (datos de Karen, 2026-11-24 14:22): tripiés, grúas, bases, pedestal y estuche
+  'rayosx/portatiles': ['VETIGENTR', 'BXJJ-X004', 'BX-005', 'DRXTR1', 'MS-06P', 'MS-05P', 'CS-06', 'DRXTR2', 'VETIPADBOX'],
   'endoscopios': ['CARRITO-ENDO', '045-00004A-00', '045-00002A-00', 'HF1816CBV', 'HF2423BV', 'HF2317HSV', 'HF1823AJV', 'HF2423RTV'],
   'monitores': [
     '045-003053-00', '9101-20-58104', '115-031324-00', '040-00004A-00', '040-00005A-00', '125-00002A-00',
@@ -1803,6 +1816,9 @@ const FAMILIAS = {
 // Título de la vista de equipos cuando no es "¿Cuál equipo?"
 const TIT_FAMILIAS = {'laboratorio/hematologia': '¿De cuántas partes?', 'laboratorio/quimica': '¿Qué tipo de química?'};
 const CATEGORIAS_PRODUCTO = {
+  // Rayos X (datos de Karen): sala = un solo sistema; portátiles = generadores y flat panel (se separan con PREGUNTAS_LISTA)
+  'rayosx/sala':      ['VETIXS380'],
+  'rayosx/portatiles': ['VETIGEN-P50', 'DRX3', 'DRX3.2', 'BEATLE-06P1H', 'VETIPADPLUSV', 'VETIPADC1V', '4336WC'],
   // Lámparas (datos de Karen): las claves de cada subcategoría, en el orden en que las mandó
   'lamparas/movil': ['HYLED180MVET', 'VeLED-E3M'],
   'lamparas/techo': ['HYLED180WVET', 'HYLED180VET', 'VELEDE5T', 'VELEDS5T', 'VELEDS52ST', 'HYLEDC5KITV'],
@@ -1817,6 +1833,10 @@ const CATEGORIAS_PRODUCTO = {
 // PREGUNTAS_LISTA: al entrar a una subcategoría se pregunta primero y la respuesta decide cuáles claves se muestran
 // (se eligen de la lista, no se agregan solas). Lo que no esté en el catálogo se omite; con menos de dos opciones no se pregunta.
 const PREGUNTAS_LISTA = {
+  'rayosx/portatiles': {texto: '¿Generadores o flat panel?', opciones: [
+    {etiqueta: 'Generadores', claves: ['VETIGEN-P50', 'DRX3', 'DRX3.2', 'BEATLE-06P1H']},
+    {etiqueta: 'Flat panel',  claves: ['VETIPADPLUSV', 'VETIPADC1V', '4336WC']}
+  ]},
   'lamparas/techo': {texto: '¿De 1 o 2 satélites?', opciones: [
     {etiqueta: 'De 1 satélite',   claves: ['HYLED180WVET', 'HYLED180VET', 'VELEDE5T', 'VELEDS5T']},
     {etiqueta: 'De 2 satélites',  claves: ['VELEDS52ST', 'HYLEDC5KITV']}
@@ -1846,7 +1866,7 @@ function esAccesorio(p, ruta){
   return !ruta || rs.some(r => r === ruta || r.indexOf(ruta + '/') === 0);
 }
 // Cómo se llama la pestaña y el enlace de accesorios en cada categoría
-const ETQ_ACC = {'anestesia': 'Accesorios', 'monitores': 'Accesorios', 'endoscopios': 'Accesorios', 'laboratorio': 'Consumibles'};
+const ETQ_ACC = {'rayosx': 'Accesorios', 'anestesia': 'Accesorios', 'monitores': 'Accesorios', 'endoscopios': 'Accesorios', 'laboratorio': 'Consumibles'};
 const etqAcc = cat => (cat && ETQ_ACC[cat.id]) || 'Accesorios y transductores';
 const _rutasCache = new WeakMap();
 function rutasDe(p){
