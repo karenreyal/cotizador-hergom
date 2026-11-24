@@ -901,12 +901,13 @@ let PRODUCTS = [];
 let CAT_IMG = {};
 const IMAGES = JSON.parse(document.getElementById('images-data').textContent);
 const NO_IMG_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" rx="10" fill="#f2f5f8"/><g stroke="#c4cedb" stroke-width="2.5" fill="none" stroke-linecap="round"><path d="M22 54 L34 38 L44 48 L52 34 L62 54"/><circle cx="30" cy="28" r="5"/></g></svg>');
-// ---------- Fotos de la tienda (hergom-medical.com) ----------
-// fotos-web.json (clave/SKU -> foto) lo actualiza cada noche una tarea de GitHub leyendo la tienda
+// ---------- Fotos, marca y descripción de la tienda (hergom-medical.com) ----------
+// fotos-web.json (clave/SKU -> foto, marca y descripción) lo actualiza cada noche una tarea de GitHub leyendo la tienda
 // (tools/fotos_tienda.py). La página solo guarda esa tabla, no las fotos: la foto se pide a la tienda
 // cuando una partida (o el selector) la necesita. Sirve igual con una lista maestra de miles de claves.
 // Orden de búsqueda de foto: 1) foto incrustada en esta página, 2) foto del catálogo, 3) foto de la tienda, 4) ícono gris.
 let FOTOS_WEB = {};
+let FOTOS_INFO = {};          // clave -> [marca, descripción] tal como están en la tienda
 let FOTOS_WEB_BASE = '';
 let FOTOS_WEB_LISTA = false;
 const FOTOS_WEB_ANCHO = 220;   // px; la tienda redimensiona la foto (así no se baja la imagen de 2000 px)
@@ -932,13 +933,46 @@ document.addEventListener('error', ev => {
   t.setAttribute('src', NO_IMG_SVG);
 }, true);
 
+function infoWeb(clave){
+  const c = (clave || '').trim().toUpperCase();
+  return (c && Object.prototype.hasOwnProperty.call(FOTOS_INFO, c)) ? FOTOS_INFO[c] : null;
+}
 function textoFotoItem(it){
   const c = (it.clave || '').trim().toUpperCase();
-  if (!c) return '📷 Escribe la clave y la foto se busca sola en la tienda.';
-  if (IMAGES[c] || CAT_IMG[c]) return '';
-  if (fotoWebUrl(c)) return '📷 Foto encontrada en la tienda.';
-  if (buscarPrecios(c)) return '';
-  return FOTOS_WEB_LISTA ? 'Sin foto en la tienda para esta clave.' : '';
+  if (!c) return '📷 Escribe la clave y la foto, la marca y la descripción se buscan solas en la tienda.';
+  if (IMAGES[c] || CAT_IMG[c] || buscarPrecios(c)) return '';
+  const foto = !!fotoWebUrl(c), inf = !!infoWeb(c);
+  if (foto && inf) return '📷 Encontrado en la tienda: foto, marca y descripción (puedes editarlos).';
+  if (inf) return 'Encontrado en la tienda: marca y descripción (sin foto).';
+  if (foto) return '📷 Foto encontrada en la tienda.';
+  return FOTOS_WEB_LISTA ? 'No está en la tienda: escribe la marca y la descripción.' : '';
+}
+// Al escribir la clave de una partida libre, pone la marca y la descripción de la tienda. Solo llena lo que está vacío,
+// con el texto de ejemplo o con lo que se había puesto solo; nunca pisa lo que el vendedor escribió.
+const DESC_LIBRE = 'Descripción del producto';
+function autocompletarDeTienda(id){
+  const it = state.items.find(x => String(x.id) === String(id));
+  if (!it) return;
+  const c = (it.clave || '').trim().toUpperCase();
+  const inf = (c && !buscarPrecios(c)) ? infoWeb(c) : null;   // un producto del catálogo no se mezcla con la tienda
+  const card = document.querySelector('#itemsList .item-card[data-id="' + id + '"]');
+  const poner = (campo, valor) => {
+    it[campo] = valor;
+    const el = card && card.querySelector(campo === 'desc' ? 'textarea[data-field="desc"]' : 'input[data-field="marca"]');
+    if (el) el.value = valor;
+  };
+  const libre = (v, auto, porDefecto) => { const t = String(v || '').trim(); return !t || t === porDefecto || (!!auto && v === auto); };
+  if (inf){
+    if (inf[0] && libre(it.marca, it.autoMarca, '')){ poner('marca', inf[0]); it.autoMarca = inf[0]; }
+    if (inf[1] && libre(it.desc, it.autoDesc, DESC_LIBRE)){ poner('desc', inf[1]); it.autoDesc = inf[1]; }
+  } else {
+    // la clave ya no coincide: se quita solo lo que se había puesto automáticamente
+    if (it.autoMarca && it.marca === it.autoMarca) poner('marca', '');
+    if (it.autoDesc && it.desc === it.autoDesc) poner('desc', DESC_LIBRE);
+    it.autoMarca = ''; it.autoDesc = '';
+  }
+  const nom = card && card.querySelector('.item-name');
+  if (nom) nom.innerHTML = (esc(it.marca) || '<i>Sin marca</i>') + ' ' + (it.clave ? '· ' + esc(it.clave) : '');
 }
 // pone la foto y el aviso de UNA partida sin volver a dibujar la lista (así no se pierde el cursor al escribir)
 function actualizarMiniaturaItem(id){
@@ -969,6 +1003,14 @@ async function cargarFotosWeb(){
       const v = d.fotos[k];
       if (typeof v === 'string' && v) m[String(k).trim().toUpperCase()] = v;
     });
+    const inf = {};
+    if (d.info && typeof d.info === 'object'){
+      Object.keys(d.info).forEach(k => {
+        const v = d.info[k];
+        if (Array.isArray(v) && (v[0] || v[1])) inf[String(k).trim().toUpperCase()] = [String(v[0] || '').toUpperCase(), String(v[1] || '')];   // la marca en mayúsculas, como en el catálogo
+      });
+    }
+    FOTOS_INFO = inf;
     FOTOS_WEB = m;
     FOTOS_WEB_BASE = (typeof d.base === 'string') ? d.base : '';
     FOTOS_WEB_LISTA = true;
@@ -2719,7 +2761,7 @@ function updateItem(id, field, value){
   const it = state.items.find(it=>it.id===id);
   if (!it) return;
   it[field] = value;
-  if (field === 'clave'){ renderComplementos(); actualizarMiniaturaItem(id); }
+  if (field === 'clave'){ renderComplementos(); autocompletarDeTienda(id); actualizarMiniaturaItem(id); }
   render();
 }
 
