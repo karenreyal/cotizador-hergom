@@ -55,3 +55,10 @@ Para productos que no tienen foto incrustada (productos libres fuera de catálog
 - El `fotos-web.json` publicado el 2026-11-24 es una semilla de 6 claves (H2-127, 7-93-7, 7-94-7, 7-95-7, MT1 y UMEC100H) para probar de inmediato.
 - Ojo: la primera foto de una variante no siempre es una foto limpia (algunas son diseños con texto). Para una clave del catálogo, la foto incrustada en `index.html` siempre gana.
 
+## Listas de precios de productos fuera del catálogo (desde 2026-11-24)
+Karen manda listas en Excel de productos que no están en LISTA VET (la primera: `LP HANDY PD PP - Mayo 2026.xlsx`, 223 claves de HANDY y YUWELL). Al escribir la clave en una partida libre, el cotizador llena marca, descripción y precio (PD y PP) con `lista-libre.json`.
+- Convertir una lista: `python3 tools/construir_lista_libre.py ARCHIVO.xlsx --fuente "LP HANDY Mayo 2026"`. La hoja necesita encabezados CLAVE, NOMBRE (o DESCRIPCIÓN), MARCA, PD y PP (cualquier orden; sobran columnas como IMAGEN o EAN; las filas de sección sin clave se saltan). Quita espacios y saltos de línea de la clave, pasa clave y marca a mayúsculas, redondea precios a centavos y avisa de claves repetidas con precios distintos, precios faltantes, PP menor que PD y PP mayor a 3 veces PD.
+- El nombre de `--fuente` identifica la lista: si se vuelve a correr con el mismo nombre, esa lista se reemplaza completa (una versión nueva no deja claves viejas); con otro nombre se suma, y si una clave sale en las dos gana la nueva. El resultado se sube a `lista-libre.json` (formato `{productos: {CLAVE: [marca, descripción, pd, pp, fuente]}}`).
+- Prioridad al llenar una partida libre: la lista de precios (marca, descripción, precios) manda sobre la tienda (`fotos-web.json`, que aporta la foto y sirve de respaldo para marca y descripción). Una clave que está en el catálogo de Vet no se mezcla con ninguna de las dos.
+- `lista-libre.json` no lo toca ningún robot: solo cambia cuando alguien corre el script y publica el resultado.
+

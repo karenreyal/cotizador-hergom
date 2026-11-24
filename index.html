@@ -901,7 +901,9 @@ let PRODUCTS = [];
 let CAT_IMG = {};
 const IMAGES = JSON.parse(document.getElementById('images-data').textContent);
 const NO_IMG_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" rx="10" fill="#f2f5f8"/><g stroke="#c4cedb" stroke-width="2.5" fill="none" stroke-linecap="round"><path d="M22 54 L34 38 L44 48 L52 34 L62 54"/><circle cx="30" cy="28" r="5"/></g></svg>');
-// ---------- Fotos, marca y descripción de la tienda (hergom-medical.com) ----------
+// ---------- Foto, marca, descripción y precio de productos fuera del catálogo ----------
+// Fuentes: lista-libre.json (listas de precios en Excel, como la de HANDY: marca, descripción, PD y PP) y
+// fotos-web.json (la tienda: foto, marca y descripción). Si una clave está en las dos, manda la lista de precios.
 // fotos-web.json (clave/SKU -> foto, marca y descripción) lo actualiza cada noche una tarea de GitHub leyendo la tienda
 // (tools/fotos_tienda.py). La página solo guarda esa tabla, no las fotos: la foto se pide a la tienda
 // cuando una partida (o el selector) la necesita. Sirve igual con una lista maestra de miles de claves.
@@ -909,6 +911,8 @@ const NO_IMG_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="
 let FOTOS_WEB = {};
 let FOTOS_INFO = {};          // clave -> [marca, descripción] tal como están en la tienda
 let FOTOS_WEB_BASE = '';
+let LISTA_LIBRE = {};         // clave -> [marca, descripción, pd, pp] de lista-libre.json
+let LISTA_LIBRE_LISTA = false;
 let FOTOS_WEB_LISTA = false;
 const FOTOS_WEB_ANCHO = 220;   // px; la tienda redimensiona la foto (así no se baja la imagen de 2000 px)
 function fotoWebUrl(clave){
@@ -937,42 +941,83 @@ function infoWeb(clave){
   const c = (clave || '').trim().toUpperCase();
   return (c && Object.prototype.hasOwnProperty.call(FOTOS_INFO, c)) ? FOTOS_INFO[c] : null;
 }
+function datoLista(clave){
+  const c = (clave || '').trim().toUpperCase();
+  return (c && Object.prototype.hasOwnProperty.call(LISTA_LIBRE, c)) ? LISTA_LIBRE[c] : null;
+}
+// junta lo que se sabe de una clave: la lista de precios manda sobre la tienda
+function datosDe(clave){
+  const l = datoLista(clave), t = infoWeb(clave);
+  if (!l && !t) return null;
+  return {
+    marca: (l && l[0]) || (t && t[0]) || '',
+    desc: (l && l[1]) || (t && t[1]) || '',
+    pd: (l && Number(l[2])) || 0,
+    pp: (l && Number(l[3])) || 0,
+  };
+}
+function unir(partes){
+  return partes.length > 1 ? partes.slice(0, -1).join(', ') + ' y ' + partes[partes.length - 1] : partes.join('');
+}
 function textoFotoItem(it){
   const c = (it.clave || '').trim().toUpperCase();
-  if (!c) return '📷 Escribe la clave y la foto, la marca y la descripción se buscan solas en la tienda.';
+  if (!c) return '📷 Escribe la clave y se buscan solos la foto, la marca, la descripción y el precio.';
   if (IMAGES[c] || CAT_IMG[c] || buscarPrecios(c)) return '';
-  const foto = !!fotoWebUrl(c), inf = !!infoWeb(c);
-  if (foto && inf) return '📷 Encontrado en la tienda: foto, marca y descripción (puedes editarlos).';
-  if (inf) return 'Encontrado en la tienda: marca y descripción (sin foto).';
-  if (foto) return '📷 Foto encontrada en la tienda.';
-  return FOTOS_WEB_LISTA ? 'No está en la tienda: escribe la marca y la descripción.' : '';
+  const foto = !!fotoWebUrl(c), d = datosDe(c);
+  const partes = [];
+  if (foto) partes.push('foto');
+  if (d && d.marca) partes.push('marca');
+  if (d && d.desc) partes.push('descripción');
+  if (d && d.pd && d.pp) partes.push('precio');
+  else if (d && d.pp) partes.push('precio PP (sin PD)');
+  else if (d && d.pd) partes.push('precio PD (sin PP)');
+  if (partes.length) return (foto ? '📷 ' : '') + 'Encontrado: ' + unir(partes) + (d ? '. Puedes editarlos.' : '.');
+  return (FOTOS_WEB_LISTA || LISTA_LIBRE_LISTA) ? 'No está en la tienda ni en tus listas: escribe la marca, la descripción y el precio.' : '';
 }
-// Al escribir la clave de una partida libre, pone la marca y la descripción de la tienda. Solo llena lo que está vacío,
-// con el texto de ejemplo o con lo que se había puesto solo; nunca pisa lo que el vendedor escribió.
+// Al escribir la clave de una partida libre, pone la marca, la descripción y el precio de la lista o de la tienda.
+// Solo llena lo que está vacío, con el texto de ejemplo o con lo que se había puesto solo; nunca pisa lo que el vendedor escribió.
 const DESC_LIBRE = 'Descripción del producto';
 function autocompletarDeTienda(id){
   const it = state.items.find(x => String(x.id) === String(id));
   if (!it) return;
   const c = (it.clave || '').trim().toUpperCase();
-  const inf = (c && !buscarPrecios(c)) ? infoWeb(c) : null;   // un producto del catálogo no se mezcla con la tienda
+  const d = (c && !buscarPrecios(c)) ? datosDe(c) : null;   // un producto del catálogo no se mezcla con otras fuentes
   const card = document.querySelector('#itemsList .item-card[data-id="' + id + '"]');
   const poner = (campo, valor) => {
     it[campo] = valor;
-    const el = card && card.querySelector(campo === 'desc' ? 'textarea[data-field="desc"]' : 'input[data-field="marca"]');
-    if (el) el.value = valor;
+    const el = card && card.querySelector(campo === 'desc' ? 'textarea[data-field="desc"]' : 'input[data-field="' + campo + '"]');
+    if (el && (campo === 'desc' || campo === 'marca')) el.value = valor;
   };
   const libre = (v, auto, porDefecto) => { const t = String(v || '').trim(); return !t || t === porDefecto || (!!auto && v === auto); };
-  if (inf){
-    if (inf[0] && libre(it.marca, it.autoMarca, '')){ poner('marca', inf[0]); it.autoMarca = inf[0]; }
-    if (inf[1] && libre(it.desc, it.autoDesc, DESC_LIBRE)){ poner('desc', inf[1]); it.autoDesc = inf[1]; }
-  } else {
-    // la clave ya no coincide: se quita solo lo que se había puesto automáticamente
-    if (it.autoMarca && it.marca === it.autoMarca) poner('marca', '');
-    if (it.autoDesc && it.desc === it.autoDesc) poner('desc', DESC_LIBRE);
-    it.autoMarca = ''; it.autoDesc = '';
+  const libreNum = (v, auto) => !(Number(v) > 0) || (!!auto && Number(v) === auto);
+  // por cada campo: si hay dato nuevo y el campo está libre se llena; si ya no hay dato (o la clave dejó de coincidir)
+  // se quita lo que se había puesto solo; lo que escribió el vendedor no se toca
+  const campos = [
+    ['marca', d ? d.marca : '', 'autoMarca', ''],
+    ['desc', d ? d.desc : '', 'autoDesc', DESC_LIBRE],
+    ['pd', d ? d.pd : 0, 'autoPd', 0],
+    ['pp', d ? d.pp : 0, 'autoPp', 0],
+  ];
+  campos.forEach(([campo, nuevo, auto, vacio]) => {
+    const num = (campo === 'pd' || campo === 'pp');
+    if (nuevo){
+      if (num ? libreNum(it[campo], it[auto]) : libre(it[campo], it[auto], vacio)){ poner(campo, nuevo); it[auto] = nuevo; }
+    } else if (it[auto] && (num ? Number(it[campo]) === it[auto] : it[campo] === it[auto])){
+      poner(campo, vacio); it[auto] = num ? 0 : '';
+    } else if (!nuevo){
+      it[auto] = num ? 0 : '';
+    }
+  });
+  if (card){
+    // el campo de precio que se ve es el del tipo de precio activo (PD o PP)
+    const campoPrecio = state.tipoPrecio === 'PD' ? 'pd' : 'pp';
+    const inp = card.querySelector('input[data-field="' + campoPrecio + '"]');
+    if (inp) inp.value = unitPrice(it) || '';
+    const w = card.querySelector('[data-warn-for="' + id + '"]');
+    if (w) w.style.display = unitPrice(it) > 0 ? 'none' : '';
+    const nom = card.querySelector('.item-name');
+    if (nom) nom.innerHTML = (esc(it.marca) || '<i>Sin marca</i>') + ' ' + (it.clave ? '· ' + esc(it.clave) : '');
   }
-  const nom = card && card.querySelector('.item-name');
-  if (nom) nom.innerHTML = (esc(it.marca) || '<i>Sin marca</i>') + ' ' + (it.clave ? '· ' + esc(it.clave) : '');
 }
 // pone la foto y el aviso de UNA partida sin volver a dibujar la lista (así no se pierde el cursor al escribir)
 function actualizarMiniaturaItem(id){
@@ -1017,7 +1062,22 @@ async function cargarFotosWeb(){
     actualizarMiniaturas();
   }catch(e){ /* sin tabla de fotos: todo sigue igual, solo sin fotos de la tienda */ }
 }
+async function cargarListaLibre(){
+  try{
+    const d = await pedirJson(CAT_AUTO_BASE + 'lista-libre.json', 8000);
+    if (!d || !d.productos || typeof d.productos !== 'object') return;
+    const m = {};
+    Object.keys(d.productos).forEach(k => {
+      const v = d.productos[k];
+      if (Array.isArray(v)) m[String(k).trim().toUpperCase()] = [String(v[0] || '').toUpperCase(), String(v[1] || ''), Number(v[2]) || 0, Number(v[3]) || 0];
+    });
+    LISTA_LIBRE = m;
+    LISTA_LIBRE_LISTA = true;
+    actualizarMiniaturas();
+  }catch(e){ /* sin lista de precios adicional: todo sigue igual */ }
+}
 setTimeout(cargarFotosWeb, 0);
+setTimeout(cargarListaLibre, 0);
 
 
 // Plan de financiamiento vigente: 6, 12 y 18 meses sin intereses (MSI) y 24 meses con 7% de interés
