@@ -492,6 +492,7 @@
   .sug-cat .preg-opt span{color:#2f8f57; font-weight:700;}
   .pk-comp .sug-cat{margin-top:16px;}
   #catSugBox .sug-cat{margin-top:12px;}
+  .comp-rec{display:inline-block; vertical-align:middle; margin-left:6px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:#14612b; background:#e9f7ef; border:1px solid #7cc59a; border-radius:999px; padding:0 7px; line-height:1.5;}
 
   @media print{
     @page{ size: letter portrait; margin: 8mm; }
@@ -988,6 +989,17 @@ const ACC_VETA3X_SELECTA = ['VETA3XBAIN', '115-00967A-00', '115-00966A-00', '033
 const ACC_VETA5 = ['115-00165A-00', '115-076054-00', '033-001251-00', 'VETA3XBAIN', 'VETAGUARD', '040-00043A-00', '6800-30-50876', 'VETA4AV',
                     '040-00034A-00', '040-00033A-00', '040-00032A-00', '040-00024A-00', 'KIT-BR-VET', '040-00042A-00', '040-001703-00'];
 const ACC_WATO = ['WATOSM', 'WATOISO', 'WATOSEVOV'];
+// Monitores que sugiere cada máquina de anestesia (Karen, 2026-11-24 15:11). Es una sección de la regla que sale ANTES de los accesorios
+// ("primero"). "destacadas" salen con la etiqueta "Recomendado" (Karen: "principalmente con capno") y van primero en su grupo.
+//   VETA 3X -> VETAL 3 (en todas sus variantes; principalmente con capnógrafo)
+//   VETA 5 y VETA 5 PLUS -> VETAL 5 (en todas sus variantes; principalmente con capnógrafo)
+//   serie WATO -> VETAL 5 y EPM 12 en todas sus variantes
+const SUG_MON_VETAL3 = {id: 'mon', titulo: 'Monitores sugeridos', primero: true, destacadas: ['VETAL3CO2V'],
+                        grupos: [{t: 'VETAL 3', claves: ['VETAL3CO2V', 'VETAL3V']}]};
+const SUG_MON_VETAL5 = {id: 'mon', titulo: 'Monitores sugeridos', primero: true, destacadas: ['VETAL-5-CO2'],
+                        grupos: [{t: 'VETAL 5', claves: ['VETAL-5-CO2', 'VETAL-5-CO2IBP', 'VETAL-5-BASIC']}]};
+const SUG_MON_WATO   = {id: 'mon', titulo: 'Monitores sugeridos', primero: true,
+                        grupos: [{t: 'VETAL 5', claves: ['VETAL-5-BASIC', 'VETAL-5-CO2', 'VETAL-5-CO2IBP']}, {t: 'EPM 12', claves: ['EPM12MVET', 'EPM12MDRVET']}]};
 // --- Monitores: accesorios básicos y los que se suman con capnógrafo y con presión invasiva ---
 const ACC_MON = ['045-003053-00', '9101-20-58104', '115-031324-00', '040-00004A-00', '040-00005A-00', '125-00002A-00'];
 const ACC_MON_CO2 = ACC_MON.concat(['VETA4AV', '115-043023-00', '115-043022-00', '115-043018-00']);
@@ -1002,10 +1014,10 @@ const SUG_FLAT = {id: 'cruz', titulo: 'Flat panel', claves: FLAT_PANELS};
 const SUG_GEN  = {id: 'cruz', titulo: 'Generadores', claves: GENERADORES};
 // SUG_CATEGORIAS: sugerencias para subir el ticket (Karen, 2026-11-24 14:51). Si la cotización lleva un EQUIPO de la categoría (clave), se sugiere cotizar
 // las categorías de su lista (rutas del selector). Una categoría que la cotización ya lleva (por un equipo, no por accesorios) no se sugiere.
+// Anestesia -> monitores ya no es de categoría: cada máquina sugiere monitores concretos (ver SUG_MON_*).
 // Para Inmunoensayo Karen escribió "hematología, inmuno y orina": la segunda es Química (inmuno sería ella misma).
 const SUG_CATEGORIAS = {
   'tomografia':              ['anestesia'],
-  'anestesia':               ['monitores'],
   'laboratorio/quimica':     ['laboratorio/hematologia', 'laboratorio/inmuno', 'laboratorio/orina'],
   'laboratorio/hematologia': ['laboratorio/quimica', 'laboratorio/inmuno', 'laboratorio/orina'],
   'laboratorio/inmuno':      ['laboratorio/hematologia', 'laboratorio/quimica', 'laboratorio/orina'],
@@ -1071,16 +1083,16 @@ const REGLAS_EQUIPO = {
   // --- Anestesia ---
   // VETA3XV es el nombre del equipo (hoy en la lista solo están sus versiones CA, PA y SELECTA); las versiones con carrito o soporte de pared
   // ya traen esa pieza, así que no se les vuelve a sugerir.
-  'VETA3XV':       {accesorios: ACC_VETA3X},
+  'VETA3XV':       {accesorios: ACC_VETA3X, secciones: [SUG_MON_VETAL3]},
   'VETA3XCA':      {como: 'VETA3XV', incluye: ['CARRITOBV']},
   'VETA3XPA':      {como: 'VETA3XV', incluye: ['115-00967A-00']},
-  'VETA3XSELECTA': {accesorios: ACC_VETA3X_SELECTA},
-  'VETA5':         {accesorios: ACC_VETA5},
+  'VETA3XSELECTA': {accesorios: ACC_VETA3X_SELECTA, secciones: [SUG_MON_VETAL3]},
+  'VETA5':         {accesorios: ACC_VETA5, secciones: [SUG_MON_VETAL5]},
   'VETA5PLUS':     {como: 'VETA5'},
   // WATO: solo soporte de monitor y vaporizadores
-  'WATOEX35VSIVET': {accesorios: ACC_WATO},
-  'WATOEX65KITV':   {accesorios: ACC_WATO},
-  'WATOA7V':        {accesorios: ACC_WATO},
+  'WATOEX35VSIVET': {accesorios: ACC_WATO, secciones: [SUG_MON_WATO]},
+  'WATOEX65KITV':   {accesorios: ACC_WATO, secciones: [SUG_MON_WATO]},
+  'WATOA7V':        {accesorios: ACC_WATO, secciones: [SUG_MON_WATO]},
 
   // --- Monitores ---
   'VETAL3V':        {accesorios: ACC_MON},
@@ -2466,13 +2478,13 @@ function armarPregunta(preg){
 
 // Estado de las secciones desplegables del panel (se conserva aunque el panel se vuelva a dibujar)
 const COMP_ABIERTO = {};
-function filaComplemento(p, boton, refaccion){
+function filaComplemento(p, boton, etiqueta){   // etiqueta: true/'Refacción' o 'Recomendado' junto a la clave
   const precio = state.tipoPrecio === 'PD' ? p.pd : p.pp;
   return `
       <div class="comp-row">
         <img class="comp-thumb" src="${imgFor(p.clave)}" alt="">
         <div class="comp-info">
-          <div class="comp-clave">${esc(p.clave)}${refaccion ? ' <span class="comp-refac">Refacción</span>' : ''}</div>
+          <div class="comp-clave">${esc(p.clave)}${etiqueta ? ' <span class="' + (etiqueta === 'Recomendado' ? 'comp-rec' : 'comp-refac') + '">' + (etiqueta === true ? 'Refacción' : etiqueta) + '</span>' : ''}</div>
           <div class="comp-desc">${esc(p.desc)}</div>
           <div class="comp-price">${precioResultado(p)}</div>
         </div>
@@ -2481,7 +2493,7 @@ function filaComplemento(p, boton, refaccion){
 }
 // Las filas de una sección ya armada (con subtítulos si la sección trae "grupos"); una refacción lleva su etiqueta.
 function filasSeccionHtml(s, g){
-  const f = p => filaComplemento(p, null, g.refac.has(claveNorm(p.clave)));
+  const f = p => filaComplemento(p, null, g.refac.has(claveNorm(p.clave)) ? 'Refacción' : (s.dest && s.dest.has(claveNorm(p.clave)) ? 'Recomendado' : false));
   if (s.grupos) return s.grupos.map(gr => '<div class="comp-grp">' + esc(gr.t) + '</div>' + gr.filas.map(f).join('')).join('');
   return s.filas.map(f).join('');
 }
@@ -2508,7 +2520,9 @@ function grupoComplementos(clave){
     (regla.secciones || []).forEach(s => {
       const grupos = s.grupos ? s.grupos.map(gr => ({t: gr.t, filas: sinCot(gr.claves)})).filter(gr => gr.filas.length) : null;
       const filas = grupos ? [].concat(...grupos.map(gr => gr.filas)) : sinCot(s.claves);
-      if (filas.length) g.secciones.push({id: s.id, titulo: s.titulo, filas, grupos, aviso: s.aviso || '', abierta: true});
+      if (!filas.length) return;
+      const sec = {id: s.id, titulo: s.titulo, filas, grupos, aviso: s.aviso || '', abierta: true, dest: new Set((s.destacadas || []).map(claveNorm))};
+      if (s.primero) g.secciones.unshift(sec); else g.secciones.push(sec);   // "primero": antes de transductores y accesorios
     });
   }
   g.n = g.planas.length + g.secciones.reduce((s, x) => s + x.filas.length, 0);
