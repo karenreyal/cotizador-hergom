@@ -1,0 +1,35 @@
+name: Fotos de la tienda
+
+# Cada noche lee la tienda (hergom-medical.com) y actualiza fotos-web.json: la tabla clave -> foto que usa el cotizador.
+# También se puede correr a mano: pestaña Actions > "Fotos de la tienda" > Run workflow.
+on:
+  schedule:
+    - cron: '17 7 * * *'     # 7:17 UTC = 1:17 a.m. hora de Ciudad de México
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fotos-tienda
+  cancel-in-progress: false
+
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Leer la tienda y armar fotos-web.json
+        run: python3 tools/fotos_tienda.py
+      - name: Publicar si hubo cambios
+        run: |
+          if [ -n "$(git status --porcelain fotos-web.json)" ]; then
+            git config user.name "fotos-tienda"
+            git config user.email "fotos-tienda@users.noreply.github.com"
+            git add fotos-web.json
+            git commit -m "Fotos de la tienda: actualización automática"
+            git pull --rebase
+            git push
+          else
+            echo "Sin cambios en las fotos."
+          fi
