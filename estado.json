@@ -1,7 +1,7 @@
 {
-  "revisado": "2026-11-24T00:50:36Z",
-  "resultado": "ok",
-  "mensaje": "",
+  "revisado": "2026-11-25T00:48:03Z",
+  "resultado": "error",
+  "mensaje": "Precios que cambian 10 veces o más (probable error al leer los números): 105-00483A-00 pp 369.0 -> 368996.0; 105-00490A-00 pp 369.0 -> 368996.0. La suma de las filas no coincide con el TOTAL de la hoja (precio público: las filas suman 38110928.25 y la hoja dice 37373674.24). Posible dígito mal copiado.",
   "fuenteModificado": "2026-11-24T00:47:44Z",
   "fuente": "LISTA VET (conectada).xlsx",
   "productos": 227,
@@ -17,6 +17,5 @@
     "Clave repetida con precios distintos (se usa la primera): P10-4SV",
     "Clave repetida con precios distintos (se usa la primera): P8-2S",
     "Precio público de V-3CFL30V tomado de tools/excepciones.json: la celda de la lista no trae número"
-  ],
-  "verificacion": "Total verificado"
+  ]
 }
